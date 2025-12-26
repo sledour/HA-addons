@@ -1,0 +1,27 @@
+name: "Watchlistarr"
+description: "Synchronise la Watchlist Plex vers Radarr et Sonarr"
+version: "1.0.0"
+slug: "watchlistarr"
+arch:
+  - aarch64
+  - amd64
+  - armv7
+init: false
+map:
+  - config:rw
+options:
+  PLEX_TOKEN: ""
+  PLEX_SERVER: ""
+  RADARR_URL: ""
+  RADARR_API_KEY: ""
+  SONARR_URL: ""
+  SONARR_API_KEY: ""
+  INTERVAL: 30
+schema:
+  PLEX_TOKEN: str
+  PLEX_SERVER: str
+  RADARR_URL: str
+  RADARR_API_KEY: str
+  SONARR_URL: str
+  SONARR_API_KEY: str
+  INTERVAL: int
