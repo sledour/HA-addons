@@ -1,17 +1,30 @@
-# Utilise l'image officielle comme base
-FROM nmarus/watchlistarr:latest
+# Utilisation de l'image de base Home Assistant (Builder compatible)
+ARG BUILD_FROM=ghcr.io/home-assistant/amd64-base:latest
+FROM $BUILD_FROM
 
-# Installation de bashio pour la communication avec HA
-RUN apk add --no-cache curl jq
-RUN curl -J -L -o /tmp/bashio.tar.gz "https://github.com/hassio-addons/bashio/archive/v0.14.3.tar.gz" \
-    && mkdir /tmp/bashio \
-    && tar zxvf /tmp/bashio.tar.gz --strip 1 -C /tmp/bashio \
-    && mv /tmp/bashio/lib /usr/lib/bashio \
-    && ln -s /usr/lib/bashio/bashio /usr/bin/bashio \
-    && rm -rf /tmp/bashio.tar.gz /tmp/bashio
+# On définit la version de Watchlistarr qu'on veut extraire
+# On utilise le système multi-stage de Docker pour récupérer les fichiers proprement
+COPY --from=nmarus/watchlistarr:latest /app /app
+
+# Installation des dépendances pour faire tourner l'app (dotnet runtime est souvent requis pour les outils "Arr")
+# Cependant, l'image nmarus est basée sur Alpine, on installe donc le nécessaire
+RUN apk add --no-cache \
+    icu-libs \
+    krb5-libs \
+    libgcc \
+    libintl \
+    libssl3 \
+    libstdc++ \
+    zlib \
+    bash \
+    curl \
+    jq
 
 # Copie du script de démarrage
 COPY run.sh /
 RUN chmod a+x /run.sh
+
+# Watchlistarr s'attend à être dans /app
+WORKDIR /app
 
 ENTRYPOINT [ "/run.sh" ]
