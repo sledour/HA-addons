@@ -7,9 +7,16 @@ arch:
   - amd64
   - armv7
 init: false
+startup: services
+boot: auto
+ingress: true
+ingress_port: 9000
+panel_icon: mdi:movie-sync
 map:
   - config:rw
 options:
+  LOG_LEVEL: "info"
+  PORT: 9000
   PLEX_TOKEN: ""
   PLEX_SERVER: ""
   RADARR_URL: ""
@@ -18,6 +25,8 @@ options:
   SONARR_API_KEY: ""
   INTERVAL: 30
 schema:
+  LOG_LEVEL: str
+  PORT: int
   PLEX_TOKEN: str
   PLEX_SERVER: str
   RADARR_URL: str
