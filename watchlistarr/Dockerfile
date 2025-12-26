@@ -1,17 +1,17 @@
-ARG BUILD_FROM
-FROM $BUILD_FROM
-
-# Installation des dépendances si nécessaire
-RUN apk add --no-cache jq
-
-# Utilise l'image officielle de Watchlistarr comme source de binaires ou de fichiers
-# Ou installe directement l'application
-# Ici, on suppose qu'on lance le container officiel adapté à HA
-# Vous pouvez aussi faire un FROM direct si vous ne voulez pas utiliser le build système de HA :
+# Utilise l'image officielle comme base
 FROM nmarus/watchlistarr:latest
 
-# Copie du script de lancement
+# Installation de bashio pour la communication avec HA
+RUN apk add --no-cache curl jq
+RUN curl -J -L -o /tmp/bashio.tar.gz "https://github.com/hassio-addons/bashio/archive/v0.14.3.tar.gz" \
+    && mkdir /tmp/bashio \
+    && tar zxvf /tmp/bashio.tar.gz --strip 1 -C /tmp/bashio \
+    && mv /tmp/bashio/lib /usr/lib/bashio \
+    && ln -s /usr/lib/bashio/bashio /usr/bin/bashio \
+    && rm -rf /tmp/bashio.tar.gz /tmp/bashio
+
+# Copie du script de démarrage
 COPY run.sh /
 RUN chmod a+x /run.sh
 
-CMD [ "/run.sh" ]
+ENTRYPOINT [ "/run.sh" ]
