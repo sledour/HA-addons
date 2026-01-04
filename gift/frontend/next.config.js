@@ -1,10 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  // Supprime la vérification ESLint au build pour éviter les blocages HA
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
+  // Retire le bloc eslint qui posait problème
 }
 
 module.exports = nextConfig
