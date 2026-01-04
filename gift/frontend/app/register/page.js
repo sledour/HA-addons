@@ -6,11 +6,13 @@ import styles from './register.module.css';
 export default function RegisterPage() {
   const [form, setForm] = useState({ email: '', pseudo: '', password: '' });
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setLoading(true);
 
     try {
       const res = await fetch('/api/auth/register', {
@@ -19,51 +21,47 @@ export default function RegisterPage() {
         body: JSON.stringify(form),
       });
 
+      const data = await res.json();
+
       if (res.ok) {
-        // Redirection vers le login après succès
-        router.push('/login');
+        // Succès ! On redirige vers la racine (le login)
+        router.push('/');
       } else {
-        const data = await res.json();
-        setError(data.error || "Une erreur est survenue.");
+        setError(data.error || "Erreur lors de l'inscription");
       }
     } catch (err) {
-      setError("Impossible de contacter le serveur.");
+      setError("Le serveur est injoignable.");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div className={styles.container}>
       <div className={styles.card}>
-        <h1>Créer un compte</h1>
-        {error && <p className={styles.error}>{error}</p>}
-        <form onSubmit={handleSubmit}>
-          <div className={styles.formGroup}>
-            <label>Pseudo</label>
-            <input 
-              type="text" required
-              onChange={(e) => setForm({...form, pseudo: e.target.value})}
-            />
-          </div>
-          <div className={styles.formGroup}>
-            <label>Email</label>
-            <input 
-              type="email" required
-              onChange={(e) => setForm({...form, email: e.target.value})}
-            />
-          </div>
-          <div className={styles.formGroup}>
-            <label>Mot de passe</label>
-            <input 
-              type="password" required
-              onChange={(e) => setForm({...form, password: e.target.value})}
-            />
-          </div>
-          <button type="submit" style={{width: '100%', marginTop: '1rem'}}>
-            S'inscrire
+        <h1>Inscription 🎁</h1>
+        {error && <p style={{color: 'red', textAlign: 'center'}}>{error}</p>}
+        
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <input 
+            type="text" placeholder="Pseudo" required 
+            onChange={e => setForm({...form, pseudo: e.target.value})} 
+          />
+          <input 
+            type="email" placeholder="Email" required 
+            onChange={e => setForm({...form, email: e.target.value})} 
+          />
+          <input 
+            type="password" placeholder="Mot de passe" required 
+            onChange={e => setForm({...form, password: e.target.value})} 
+          />
+          <button type="submit" disabled={loading}>
+            {loading ? 'Création...' : 'Créer mon compte'}
           </button>
         </form>
-        <p style={{textAlign: 'center', marginTop: '1rem'}}>
-          Déjà un compte ? <a href="/login" style={{color: '#03a9f4'}}>Se connecter</a>
+
+        <p style={{ textAlign: 'center', marginTop: '1.5rem' }}>
+          Déjà inscrit ? <a href="/" style={{ color: '#03a9f4', textDecoration: 'none' }}>Se connecter</a>
         </p>
       </div>
     </div>

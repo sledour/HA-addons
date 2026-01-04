@@ -55,6 +55,33 @@ initDb();
 
 // --- Routes API ---
 
+// Route de connexion (Login)
+app.post('/api/auth/login', async (req, res) => {
+  const { email, password } = req.body;
+  
+  try {
+    // On cherche l'utilisateur avec l'email ET le mot de passe
+    const result = await pool.query(
+      'SELECT id, email, pseudo FROM users WHERE email = $1 AND password = $2',
+      [email, password]
+    );
+
+    if (result.rows.length > 0) {
+      // Utilisateur trouvé !
+      res.json({
+        message: "Connexion réussie",
+        user: result.rows[0]
+      });
+    } else {
+      // Aucun utilisateur ne correspond
+      res.status(401).json({ error: "Email ou mot de passe incorrect" });
+    }
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Erreur serveur lors de la connexion" });
+  }
+});
+
 // Inscription (simplifiée pour l'instant)
 app.post('/api/auth/register', async (req, res) => {
   const { email, pseudo, password } = req.body;
