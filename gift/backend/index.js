@@ -107,13 +107,15 @@ app.get('/api/gifts', async (req, res) => {
   }
 });
 
-// --- Service du Frontend (Fichiers Statiques) ---
-// On sert les fichiers exportés par Next.js (dossier out)
-app.use(express.static(path.join(__dirname, '../frontend/out')));
+// Utilise path.resolve pour être certain du chemin
+const frontendPath = path.resolve(__dirname, '../frontend/out');
+console.log("📂 Serveur de fichiers statiques depuis :", frontendPath);
 
-// Redirection vers l'index pour toutes les autres routes (SPA)
+app.use(express.static(frontendPath));
+
+// Route de secours pour les SPA
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../frontend/out/index.html'));
+  res.sendFile(path.join(frontendPath, 'index.html'));
 });
 
 app.listen(port, '0.0.0.0', () => {
