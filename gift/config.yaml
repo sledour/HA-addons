@@ -1,5 +1,5 @@
 name: "Gift!"
-version: "1.0.11"
+version: "1.0.12"
 slug: "gift"
 description: "Mon application de gestion de cadeaux collaborative"
 arch:
