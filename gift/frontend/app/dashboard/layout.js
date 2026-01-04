@@ -16,15 +16,16 @@ export default function DashboardLayout({ children }) {
             </main>
 
             <nav className="bottom-nav">
-                <Link href="/dashboard/" className={`nav-item ${pathname === '/dashboard/' ? 'active' : ''}`}>
+                {/* On utilise "./" pour rester dans le dossier dashboard actuel */}
+                <Link href="./" className={`nav-item ${pathname === '/dashboard/' ? 'active' : ''}`}>
                     <span className="nav-icon">🎁</span>
                     <span>Ma Liste</span>
                 </Link>
-                <Link href="/dashboard/events/" className={`nav-item ${isActive('events') ? 'active' : ''}`}>
+                <Link href="events/" className={`nav-item ${isActive('events') ? 'active' : ''}`}>
                     <span className="nav-icon">📅</span>
                     <span>Événements</span>
                 </Link>
-                <Link href="/dashboard/settings/" className={`nav-item ${isActive('settings') ? 'active' : ''}`}>
+                <Link href="settings/" className={`nav-item ${isActive('settings') ? 'active' : ''}`}>
                     <span className="nav-icon">⚙️</span>
                     <span>Réglages</span>
                 </Link>

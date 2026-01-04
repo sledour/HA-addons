@@ -60,22 +60,29 @@ app.get('/api/gifts/me', async (req, res) => {
 app.use(express.static(frontendPath));
 
 app.get('*', (req, res) => {
-  if (req.url.startsWith('/api')) return res.status(404).json({error: "API non trouvée"});
+    if (req.url.startsWith('/api')) return res.status(404).json({error: "API non trouvée"});
 
-  const cleanUrl = req.url.split('?')[0];
-  const targetPath = path.join(frontendPath, cleanUrl, 'index.html');
-  
-  if (fs.existsSync(targetPath)) {
-      return res.sendFile(targetPath);
-  } else {
-      // Pour les fichiers JS/CSS qui n'auraient pas été trouvés par static
-      const directPath = path.join(frontendPath, cleanUrl);
-      if (fs.existsSync(directPath) && !fs.lstatSync(directPath).isDirectory()) {
-          return res.sendFile(directPath);
-      }
-      // Fallback SPA
-      return res.sendFile(path.join(frontendPath, 'index.html'));
-  }
+    const cleanUrl = req.url.split('?')[0];
+    
+    // On essaie plusieurs variantes pour trouver le bon fichier index.html
+    const pathsToTry = [
+        path.join(frontendPath, cleanUrl, 'index.html'),
+        path.join(frontendPath, cleanUrl + '/index.html'),
+        path.join(frontendPath, cleanUrl)
+    ];
+
+    for (const p of pathsToTry) {
+        if (fs.existsSync(p) && !fs.lstatSync(p).isDirectory()) {
+            return res.sendFile(p);
+        }
+    }
+
+    // Fallback ultime vers la racine du dashboard si on est dans le dossier dashboard
+    if (cleanUrl.includes('dashboard')) {
+        return res.sendFile(path.join(frontendPath, 'dashboard/index.html'));
+    }
+    
+    return res.sendFile(path.join(frontendPath, 'index.html'));
 });
 
 app.listen(port, '0.0.0.0', () => {

@@ -4,25 +4,37 @@ import { useState, useEffect } from 'react';
 export default function PersonnalListPage() {
     const [gifts, setGifts] = useState([]);
 
-    useEffect(() => {
-        console.log("UX: Chargement de la liste perso...");
-        // On ajoutera le fetch API ici plus tard
-    }, []);
+    const addGift = () => {
+        const name = prompt("Nom du cadeau :");
+        if (name) {
+            console.log("UX: Ajout du cadeau", name);
+            // Simulation d'ajout local en attendant le fetch POST
+            setGifts([...gifts, { id: Date.now(), name: name, description: 'Ajouté manuellement' }]);
+        }
+    };
 
     return (
         <div>
             <h1>Ma Liste de Cadeaux</h1>
-            <p>Ici, tu peux ajouter les cadeaux que tu aimerais recevoir.</p>
-            
             <div className="gift-list">
-                {/* Simulation d'item */}
-                <div style={{background:'white', padding:'1rem', borderRadius:'8px', marginBottom:'1rem'}}>
-                    <strong>Exemple : Console PS5</strong>
-                    <p>Pour jouer avec les copains</p>
-                </div>
+                {gifts.map(gift => (
+                    <div key={gift.id} style={{background:'white', padding:'1rem', borderRadius:'8px', marginBottom:'1rem', color: '#333'}}>
+                        <strong>{gift.name}</strong>
+                    </div>
+                ))}
             </div>
             
-            <button className="btn-add" style={{position:'fixed', right:'20px', bottom:'90px', borderRadius:'50%', width:'60px', height:'60px', backgroundColor:'#03a9f4', color:'white', border:'none', fontSize:'24px', boxShadow:'0 4px 10px rgba(0,0,0,0.3)'}}>+</button>
+            <button 
+                onClick={addGift} 
+                style={{
+                    position:'fixed', right:'20px', bottom:'90px', 
+                    borderRadius:'50%', width:'60px', height:'60px', 
+                    backgroundColor:'#03a9f4', color:'white', border:'none', 
+                    fontSize:'24px', cursor: 'pointer', zIndex: 1001
+                }}
+            >
+                +
+            </button>
         </div>
     );
 }
