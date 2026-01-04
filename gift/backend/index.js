@@ -132,16 +132,25 @@ app.use(express.static(frontendPath));
 
 // 3. Gestion intelligente du routage (SPA + Ingress)
 app.get('*', (req, res) => {
-  // On ne traite pas les routes API ici
   if (req.url.startsWith('/api')) return res.status(404).json({error: "API non trouvée"});
 
-  const potentialPath = path.join(frontendPath, req.url, 'index.html');
+  // On nettoie l'URL pour enlever les paramètres superflus
+  const cleanUrl = req.url.split('?')[0];
   
-  if (fs.existsSync(potentialPath)) {
-      res.sendFile(potentialPath);
+  // Chemin 1 : Tentative vers /dossier/index.html (ex: /register/)
+  const pathIndex = path.join(frontendPath, cleanUrl, 'index.html');
+  // Chemin 2 : Tentative vers /fichier.html (ex: /register.html)
+  const pathHtml = path.join(frontendPath, `${cleanUrl}.html`);
+
+  if (fs.existsSync(pathIndex)) {
+      console.log(`✅ Service via index: ${cleanUrl}`);
+      return res.sendFile(pathIndex);
+  } else if (fs.existsSync(pathHtml)) {
+      console.log(`✅ Service via HTML: ${cleanUrl}`);
+      return res.sendFile(pathHtml);
   } else {
-      // Fallback sur l'index principal pour laisser Next.js gérer le routing
-      res.sendFile(path.join(frontendPath, 'index.html'));
+      console.log(`⚠️ Fallback vers index racine pour : ${cleanUrl}`);
+      return res.sendFile(path.join(frontendPath, 'index.html'));
   }
 });
 
