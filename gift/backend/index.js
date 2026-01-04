@@ -4,6 +4,13 @@ const { Pool } = require('pg');
 const app = express();
 const port = 3000;
 
+
+// --- NETTOYAGE DES LOGS ---
+console.clear(); 
+console.log("========================================");
+console.log("   🚀 DÉMARRAGE DU SYSTÈME GIFT   ");
+console.log("========================================");
+
 app.use(express.json());
 
 // --- Configuration PostgreSQL ---
