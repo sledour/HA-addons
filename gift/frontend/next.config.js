@@ -1,10 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'export',
-  trailingSlash: true, 
-  distDir: 'out',
-  // On empêche Next.js de croire qu'il est à la racine du domaine
-  images: { unoptimized: true },
+  trailingSlash: true,
+  // Ajoute cette ligne pour que les liens ne commencent pas par "/" au sens strict du domaine
+  assetPrefix: './', 
 }
 
 module.exports = nextConfig

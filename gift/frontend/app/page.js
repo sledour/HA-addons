@@ -25,7 +25,7 @@ export default function LoginPage() {
           <button type="submit">Se connecter</button>
         </form>
         <p style={{ marginTop: '1rem', textAlign: 'center', fontSize: '0.9rem' }}>
-          Pas de compte ? <Link href="/register" style={{ color: '#03a9f4' }}>S'inscrire</Link>
+          Pas de compte ? <Link href="./register" style={{ color: '#03a9f4' }}>S'inscrire</Link>
         </p>
       </div>
     </div>
