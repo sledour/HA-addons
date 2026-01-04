@@ -9,17 +9,19 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  console.log("Tentative d'envoi des données :", form); // Vérifie si le bouton réagit
 
-    try {
-      const res = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
-      });
+  try {
+    // Utilise un chemin relatif sans le premier slash si l'autre échoue
+    const res = await fetch('api/auth/register', { 
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(form),
+    });
+
+    console.log("Statut de la réponse :", res.status);
 
       const data = await res.json();
 

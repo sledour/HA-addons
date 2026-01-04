@@ -96,15 +96,18 @@ app.post('/api/auth/login', async (req, res) => {
 
 app.post('/api/auth/register', async (req, res) => {
   const { email, pseudo, password } = req.body;
+  console.log(`📩 Tentative d'inscription pour : ${email}`); // <--- AJOUTE ÇA
+  
   try {
     const result = await pool.query(
       'INSERT INTO users (email, pseudo, password) VALUES ($1, $2, $3) RETURNING id, email, pseudo',
       [email, pseudo, password]
     );
+    console.log(`✅ Utilisateur créé ID: ${result.rows[0].id}`);
     res.json(result.rows[0]);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Cet email est déjà utilisé ou erreur serveur." });
+    console.error("❌ Erreur DB Inscription:", err.message);
+    res.status(500).json({ error: "Email déjà utilisé ou erreur serveur." });
   }
 });
 
