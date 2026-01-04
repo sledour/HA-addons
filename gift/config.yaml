@@ -1,0 +1,12 @@
+name: "Gift"
+version: "1.0.0"
+slug: "gift"
+description: "Mon application de gestion de cadeaux collaborative"
+arch:
+- aarch64
+- amd64
+- armv7
+init: false
+ingress: true
+ingress_port: 3000
+panel_icon: "mdi:gift"
