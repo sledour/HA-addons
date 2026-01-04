@@ -7,7 +7,7 @@ export default function Home() {
 
   useEffect(() => {
     // Appel au Backend (port 3001)
-    fetch('http://192.168.0.200:3001/api/status')
+    fetch('http://192.168.0.200:3005/api/status')
       .then((res) => res.json())
       .then((json) => setData(json))
       .catch((err) => {

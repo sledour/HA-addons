@@ -1,5 +1,5 @@
 name: "Gift"
-version: "1.0.3"
+version: "1.0.4"
 slug: "gift"
 description: "Mon application de gestion de cadeaux collaborative"
 arch:
@@ -11,4 +11,4 @@ ingress: true
 ingress_port: 3000
 panel_icon: "mdi:gift"
 ports:
-  3001/tcp: 3001
+  3001/tcp: 3005
