@@ -1,14 +1,14 @@
 const express = require('express');
 const path = require('path');
+const fs = require('fs'); // Nécessaire pour le diagnostic
 const { Pool } = require('pg');
 const app = express();
 const port = 3000;
 
-
 // --- NETTOYAGE DES LOGS ---
 console.clear(); 
 console.log("========================================");
-console.log("   🚀 DÉMARRAGE DU SYSTÈME GIFT   ");
+console.log("    🚀 DÉMARRAGE DU SYSTÈME GIFT   ");
 console.log("========================================");
 
 app.use(express.json());
@@ -19,7 +19,7 @@ const pool = new Pool({
   port: 5432,
   user: 'postgres',
   password: 'homeassistant',
-  database: 'postgres', // Base par défaut
+  database: 'postgres', 
 });
 
 // --- Initialisation de la Base de Données ---
@@ -28,7 +28,6 @@ const initDb = async () => {
     const client = await pool.connect();
     console.log("✅ Connecté à PostgreSQL");
 
-    // Table Utilisateurs
     await client.query(`
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
@@ -39,7 +38,6 @@ const initDb = async () => {
       );
     `);
 
-    // Table Cadeaux (liée à un utilisateur plus tard)
     await client.query(`
       CREATE TABLE IF NOT EXISTS gifts (
         id SERIAL PRIMARY KEY,
@@ -60,27 +58,34 @@ const initDb = async () => {
 
 initDb();
 
+// --- DIAGNOSTIC DU FRONTEND ---
+const frontendPath = path.resolve(__dirname, '../frontend/out');
+console.log("🔍 Vérification du dossier frontend/out...");
+
+if (fs.existsSync(frontendPath)) {
+    const files = fs.readdirSync(frontendPath);
+    console.log("📁 Fichiers trouvés à la racine /out :", files);
+    if (files.includes('register')) {
+        console.log("✅ Dossier 'register' présent.");
+    } else {
+        console.log("⚠️ ATTENTION : Dossier 'register' introuvable dans /out");
+    }
+} else {
+    console.log("❌ ERREUR : Le dossier /frontend/out n'existe pas !");
+}
+
 // --- Routes API ---
 
-// Route de connexion (Login)
 app.post('/api/auth/login', async (req, res) => {
   const { email, password } = req.body;
-  
   try {
-    // On cherche l'utilisateur avec l'email ET le mot de passe
     const result = await pool.query(
       'SELECT id, email, pseudo FROM users WHERE email = $1 AND password = $2',
       [email, password]
     );
-
     if (result.rows.length > 0) {
-      // Utilisateur trouvé !
-      res.json({
-        message: "Connexion réussie",
-        user: result.rows[0]
-      });
+      res.json({ message: "Connexion réussie", user: result.rows[0] });
     } else {
-      // Aucun utilisateur ne correspond
       res.status(401).json({ error: "Email ou mot de passe incorrect" });
     }
   } catch (err) {
@@ -89,7 +94,6 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-// Inscription (simplifiée pour l'instant)
 app.post('/api/auth/register', async (req, res) => {
   const { email, pseudo, password } = req.body;
   try {
@@ -104,7 +108,6 @@ app.post('/api/auth/register', async (req, res) => {
   }
 });
 
-// Récupérer les cadeaux
 app.get('/api/gifts', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM gifts ORDER BY created_at DESC');
@@ -115,23 +118,31 @@ app.get('/api/gifts', async (req, res) => {
 });
 
 // --- Service du Frontend ---
-const frontendPath = path.join(__dirname, '../frontend/out');
+
+// 1. Logger chaque requête pour comprendre le 404
+app.use((req, res, next) => {
+    if (!req.url.startsWith('/api')) {
+        console.log(`🌐 Navigation vers : ${req.url}`);
+    }
+    next();
+});
+
+// 2. Servir les fichiers statiques (CSS, JS, Images)
 app.use(express.static(frontendPath));
 
-// Correction pour les routes Next.js exportées
+// 3. Gestion intelligente du routage (SPA + Ingress)
 app.get('*', (req, res) => {
-  const url = req.url;
+  // On ne traite pas les routes API ici
+  if (req.url.startsWith('/api')) return res.status(404).json({error: "API non trouvée"});
+
+  const potentialPath = path.join(frontendPath, req.url, 'index.html');
   
-  // 1. On tente de servir le fichier HTML correspondant (ex: /register -> /register/index.html)
-  // C'est vital pour l'export "trailingSlash: true"
-  const potentialPath = path.join(frontendPath, url, 'index.html');
-  
-  res.sendFile(potentialPath, (err) => {
-    if (err) {
-      // 2. Si le fichier n'existe pas, on renvoie l'index.html racine
+  if (fs.existsSync(potentialPath)) {
+      res.sendFile(potentialPath);
+  } else {
+      // Fallback sur l'index principal pour laisser Next.js gérer le routing
       res.sendFile(path.join(frontendPath, 'index.html'));
-    }
-  });
+  }
 });
 
 app.listen(port, '0.0.0.0', () => {
