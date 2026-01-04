@@ -10,7 +10,7 @@ export default function Home() {
   // Charger les cadeaux depuis le backend
   const fetchGifts = async () => {
     try {
-      const res = await fetch('http://192.168.0.200:3005/api/gifts');
+      const res = await fetch('/api/gifts');
       const data = await res.json();
       setGifts(data);
     } catch (err) {
@@ -27,7 +27,7 @@ export default function Home() {
     e.preventDefault();
     if (!name) return;
 
-    await fetch('http://192.168.0.200:3005/api/gifts', {
+    await fetch('/api/gifts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, description: desc }),

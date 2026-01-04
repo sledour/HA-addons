@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: 'export', // Génère un dossier 'out'
   reactStrictMode: true,
-  // Retire le bloc eslint qui posait problème
 }
 
 module.exports = nextConfig
