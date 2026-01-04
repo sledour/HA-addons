@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import styles from './register.module.css';
+import Link from 'next/link';
 
 export default function RegisterPage() {
   const [form, setForm] = useState({ email: '', pseudo: '', password: '' });
