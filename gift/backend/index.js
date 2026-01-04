@@ -134,22 +134,24 @@ app.use(express.static(frontendPath));
 app.get('*', (req, res) => {
   if (req.url.startsWith('/api')) return res.status(404).json({error: "API non trouvée"});
 
-  // On nettoie l'URL pour enlever les paramètres superflus
-  const cleanUrl = req.url.split('?')[0];
+  const cleanUrl = req.url.split('?')[0]; // Enlève les ?_rsc=...
   
-  // Chemin 1 : Tentative vers /dossier/index.html (ex: /register/)
+  // 1. On définit les chemins possibles
   const pathIndex = path.join(frontendPath, cleanUrl, 'index.html');
-  // Chemin 2 : Tentative vers /fichier.html (ex: /register.html)
-  const pathHtml = path.join(frontendPath, `${cleanUrl}.html`);
+  const pathDirectHtml = path.join(frontendPath, `${cleanUrl}.html`);
+  const pathFile = path.join(frontendPath, cleanUrl);
 
+  // 2. Logique de priorité
   if (fs.existsSync(pathIndex)) {
-      console.log(`✅ Service via index: ${cleanUrl}`);
+      console.log(`✅ Dossier trouvé, envoi de : ${cleanUrl}/index.html`);
       return res.sendFile(pathIndex);
-  } else if (fs.existsSync(pathHtml)) {
-      console.log(`✅ Service via HTML: ${cleanUrl}`);
-      return res.sendFile(pathHtml);
+  } else if (fs.existsSync(pathDirectHtml)) {
+      console.log(`✅ Fichier HTML trouvé : ${cleanUrl}.html`);
+      return res.sendFile(pathDirectHtml);
+  } else if (fs.existsSync(pathFile) && !fs.lstatSync(pathFile).isDirectory()) {
+      return res.sendFile(pathFile);
   } else {
-      console.log(`⚠️ Fallback vers index racine pour : ${cleanUrl}`);
+      console.log(`⚠️ Redirection Ingress/SPA vers racine pour : ${cleanUrl}`);
       return res.sendFile(path.join(frontendPath, 'index.html'));
   }
 });
