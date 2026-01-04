@@ -33,6 +33,7 @@ app.use((req, res, next) => {
 const frontendPath = path.resolve(__dirname, '../frontend/out');
 
 // --- Routes API (UX validation) ---
+// Login & Register
 app.post('/api/auth/login', async (req, res) => {
     console.log("📩 [API] Tentative de connexion...");
     res.json({ success: true, message: "Login validé par le backend" });
@@ -41,6 +42,18 @@ app.post('/api/auth/login', async (req, res) => {
 app.post('/api/auth/register', async (req, res) => {
     console.log("📩 [API] Tentative d'inscription...");
     res.json({ success: true, message: "Inscription validée par le backend" });
+});
+
+// My gift list
+app.get('/api/gifts/me', async (req, res) => {
+    console.log("📩 [API GET] Demande de la liste personnelle");
+    // Plus tard, on filtrera par l'ID de l'utilisateur connecté
+    try {
+        const result = await pool.query('SELECT * FROM gifts ORDER BY created_at DESC');
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 // --- Service Statique & Routage Ingress ---

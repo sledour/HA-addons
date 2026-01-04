@@ -1,0 +1,43 @@
+/* Container principal pour laisser de la place à la navbar en bas */
+.dashboard-container {
+    padding: 1rem;
+    padding-bottom: 80px; 
+    min-height: 100vh;
+    background-color: #f5f5f5;
+    color: #333;
+}
+
+/* La Navbar fixe en bas */
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 70px;
+    background-color: white;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    border-top: 1px solid #ddd;
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+    z-index: 1000;
+}
+
+.nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-decoration: none;
+    color: #666;
+    font-size: 0.8rem;
+}
+
+.nav-item.active {
+    color: #03a9f4;
+    font-weight: bold;
+}
+
+.nav-icon {
+    font-size: 1.5rem;
+    margin-bottom: 2px;
+}
