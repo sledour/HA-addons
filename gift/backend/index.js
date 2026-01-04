@@ -10,7 +10,7 @@ app.use(express.json());
 const pool = new Pool({
   host: 'db21ed7f-postgres-latest',
   port: 5432,
-  user: 'homeassistant',
+  user: 'postgres',
   password: 'homeassistant',
   database: 'postgres', // Base par défaut
 });
