@@ -2,8 +2,9 @@
 const nextConfig = {
   output: 'export',
   trailingSlash: true,
-  // Ajoute cette ligne pour que les liens ne commencent pas par "/" au sens strict du domaine
-  assetPrefix: './', 
+  images: { unoptimized: true },
+  // Ne mets PAS de assetPrefix ou basePath pour l'instant, 
+  // laissons Express gérer le service de fichiers.
 }
 
 module.exports = nextConfig
