@@ -114,22 +114,22 @@ app.get('/api/gifts', async (req, res) => {
   }
 });
 
-const frontendPath = path.resolve(__dirname, '../frontend/out');
-
-// 1. Servir les fichiers statiques normalement
+// --- Service du Frontend ---
+const frontendPath = path.join(__dirname, '../frontend/out');
 app.use(express.static(frontendPath));
 
-// 2. Route API (doivent être AVANT le app.get('*'))
-app.post('/api/auth/register', async (req, res) => { /* ... */ });
-app.post('/api/auth/login', async (req, res) => { /* ... */ });
-
-// 3. LA FIX INGRESS : Si on demande une page (comme /register), 
-// et qu'elle n'est pas trouvée en fichier physique, on renvoie l'index.
+// Correction pour les routes Next.js exportées
 app.get('*', (req, res) => {
-  console.log("Routing Ingress pour :", req.url);
-  res.sendFile(path.join(frontendPath, 'index.html'), (err) => {
+  const url = req.url;
+  
+  // 1. On tente de servir le fichier HTML correspondant (ex: /register -> /register/index.html)
+  // C'est vital pour l'export "trailingSlash: true"
+  const potentialPath = path.join(frontendPath, url, 'index.html');
+  
+  res.sendFile(potentialPath, (err) => {
     if (err) {
-      res.status(500).send("Index.html introuvable dans " + frontendPath);
+      // 2. Si le fichier n'existe pas, on renvoie l'index.html racine
+      res.sendFile(path.join(frontendPath, 'index.html'));
     }
   });
 });
