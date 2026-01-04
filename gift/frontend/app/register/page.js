@@ -10,31 +10,25 @@ export default function RegisterPage() {
   const router = useRouter();
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
+  e.preventDefault();
+  try {
+    const res = await fetch('/api/auth/register', { // Route définie dans ton index.js
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(form), // form contient email, pseudo, password
+    });
 
-    try {
-      const res = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
-      });
-
+    if (res.ok) {
+      alert("Compte créé !");
+      router.push('../'); // Retour au login après succès
+    } else {
       const data = await res.json();
-
-      if (res.ok) {
-        // Succès ! On redirige vers la racine (le login)
-        router.push('/');
-      } else {
-        setError(data.error || "Erreur lors de l'inscription");
-      }
-    } catch (err) {
-      setError("Le serveur est injoignable.");
-    } finally {
-      setLoading(false);
+      alert(data.error || "Erreur");
     }
-  };
+  } catch (err) {
+    console.error("Erreur fetch:", err);
+  }
+};
 
   return (
     <div className={styles.container}>
@@ -61,7 +55,7 @@ export default function RegisterPage() {
         </form>
 
         <p style={{ textAlign: 'center', marginTop: '1.5rem' }}>
-          Déjà inscrit ? <a href="/" style={{ color: '#03a9f4', textDecoration: 'none' }}>Se connecter</a>
+          Déjà inscrit ? <Link href="../" style={{ color: '#03a9f4' }}>Se connecter</Link>
         </p>
       </div>
     </div>

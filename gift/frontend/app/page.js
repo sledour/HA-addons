@@ -9,11 +9,24 @@ export default function LoginPage() {
   const router = useRouter();
 
   const handleLogin = async (e) => {
-    e.preventDefault();
-    // Pour l'instant on simule, on créera la route API juste après
-    console.log("Connexion de :", email);
-    router.push('/dashboard'); 
-  };
+  e.preventDefault();
+  
+  const res = await fetch('/api/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  });
+
+  const data = await res.json();
+
+  if (res.ok) {
+    console.log("Connecté !", data.user);
+    // On utilise un chemin relatif sans slash au début
+    router.push('dashboard/'); 
+  } else {
+    alert(data.error || "Identifiants incorrects");
+  }
+};
 
   return (
     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
