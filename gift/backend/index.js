@@ -50,6 +50,21 @@ app.get('/api/gifts', async (req, res) => {
   }
 });
 
+// Route pour ajouter un cadeau
+app.post('/api/gifts', async (req, res) => {
+  const { name, description } = req.body;
+  try {
+    const result = await pool.query(
+      'INSERT INTO gifts (name, description) VALUES ($1, $2) RETURNING *',
+      [name, description]
+    );
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Erreur lors de l'ajout du cadeau" });
+  }
+});
+
 // Route de statut modifiée
 app.get('/api/status', async (req, res) => {
   try {
