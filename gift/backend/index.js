@@ -107,15 +107,24 @@ app.get('/api/gifts', async (req, res) => {
   }
 });
 
-// Utilise path.resolve pour être certain du chemin
 const frontendPath = path.resolve(__dirname, '../frontend/out');
-console.log("📂 Serveur de fichiers statiques depuis :", frontendPath);
 
+// 1. Servir les fichiers statiques normalement
 app.use(express.static(frontendPath));
 
-// Route de secours pour les SPA
+// 2. Route API (doivent être AVANT le app.get('*'))
+app.post('/api/auth/register', async (req, res) => { /* ... */ });
+app.post('/api/auth/login', async (req, res) => { /* ... */ });
+
+// 3. LA FIX INGRESS : Si on demande une page (comme /register), 
+// et qu'elle n'est pas trouvée en fichier physique, on renvoie l'index.
 app.get('*', (req, res) => {
-  res.sendFile(path.join(frontendPath, 'index.html'));
+  console.log("Routing Ingress pour :", req.url);
+  res.sendFile(path.join(frontendPath, 'index.html'), (err) => {
+    if (err) {
+      res.status(500).send("Index.html introuvable dans " + frontendPath);
+    }
+  });
 });
 
 app.listen(port, '0.0.0.0', () => {

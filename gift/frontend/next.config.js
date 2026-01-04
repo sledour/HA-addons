@@ -1,8 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'export',
-  trailingSlash: true, // Aide Express à trouver les dossiers
-  images: { unoptimized: true }, // Obligatoire pour l'export statique sur HA
+  trailingSlash: true, 
+  distDir: 'out',
+  // On empêche Next.js de croire qu'il est à la racine du domaine
+  images: { unoptimized: true },
 }
 
 module.exports = nextConfig
