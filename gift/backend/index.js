@@ -11,9 +11,9 @@ app.use(express.json());
 const pool = new Pool({
   host: 'db21ed7f-postgres-latest',
   port: 5432,
-  user: 'homeassistant',
+  user: 'postgres',
   password: 'homeassistant',
-  database: 'homeassistant', // Par défaut, l'addon utilise souvent ce nom de DB
+  database: 'postgres', // Par défaut, l'addon utilise souvent ce nom de DB
 });
 
 // Test de connexion et création de la table si elle n'existe pas
