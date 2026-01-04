@@ -1,7 +1,6 @@
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import styles from './register.module.css';
 import Link from 'next/link';
 
 export default function RegisterPage() {
@@ -11,54 +10,72 @@ export default function RegisterPage() {
   const router = useRouter();
 
   const handleSubmit = async (e) => {
-  e.preventDefault();
-  try {
-    const res = await fetch('/api/auth/register', { // Route définie dans ton index.js
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(form), // form contient email, pseudo, password
-    });
+    e.preventDefault();
+    setError('');
+    setLoading(true);
 
-    if (res.ok) {
-      alert("Compte créé !");
-      router.push('../'); // Retour au login après succès
-    } else {
+    try {
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      });
+
       const data = await res.json();
-      alert(data.error || "Erreur");
+
+      if (res.ok) {
+        // ✅ SUCCÈS : L'utilisateur est créé
+        console.log("Utilisateur créé avec succès");
+        alert("Compte créé avec succès ! Connectez-vous maintenant.");
+        
+        // On redirige vers le login (chemin relatif Ingress)
+        router.push('../'); 
+      } else {
+        // ❌ ERREUR API (ex: email déjà pris)
+        setError(data.error || "Une erreur est survenue lors de l'inscription.");
+      }
+    } catch (err) {
+      // ❌ ERREUR RÉSEAU
+      setError("Impossible de contacter le serveur.");
+    } finally {
+      setLoading(false);
     }
-  } catch (err) {
-    console.error("Erreur fetch:", err);
-  }
-};
+  };
 
   return (
-    <div className={styles.container}>
-      <div className={styles.card}>
-        <h1>Inscription 🎁</h1>
-        {error && <p style={{color: 'red', textAlign: 'center'}}>{error}</p>}
-        
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <input 
-            type="text" placeholder="Pseudo" required 
-            onChange={e => setForm({...form, pseudo: e.target.value})} 
-          />
-          <input 
-            type="email" placeholder="Email" required 
-            onChange={e => setForm({...form, email: e.target.value})} 
-          />
-          <input 
-            type="password" placeholder="Mot de passe" required 
-            onChange={e => setForm({...form, password: e.target.value})} 
-          />
-          <button type="submit" disabled={loading}>
-            {loading ? 'Création...' : 'Créer mon compte'}
-          </button>
-        </form>
+    <div style={{ padding: '2rem' }}>
+      <h1>Inscription</h1>
+      
+      {/* Affichage de l'erreur si elle existe */}
+      {error && <p style={{ color: 'red', fontWeight: 'bold' }}>{error}</p>}
 
-        <p style={{ textAlign: 'center', marginTop: '1.5rem' }}>
-          Déjà inscrit ? <Link href="../" style={{ color: '#03a9f4' }}>Se connecter</Link>
-        </p>
-      </div>
+      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '300px' }}>
+        <input 
+          type="text" 
+          placeholder="Pseudo" 
+          onChange={e => setForm({...form, pseudo: e.target.value})} 
+          required 
+        />
+        <input 
+          type="email" 
+          placeholder="Email" 
+          onChange={e => setForm({...form, email: e.target.value})} 
+          required 
+        />
+        <input 
+          type="password" 
+          placeholder="Mot de passe" 
+          onChange={e => setForm({...form, password: e.target.value})} 
+          required 
+        />
+        <button type="submit" disabled={loading}>
+          {loading ? 'Création en cours...' : "S'inscrire"}
+        </button>
+      </form>
+
+      <p style={{ marginTop: '1rem' }}>
+        Déjà un compte ? <Link href="../" style={{ color: '#03a9f4' }}>Se connecter</Link>
+      </p>
     </div>
   );
 }
