@@ -2,23 +2,20 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# On installe les dépendances du front
+# 1. Build du Frontend
 COPY frontend/package*.json ./frontend/
 RUN cd frontend && npm install
-
-# On copie le code du front et on BUILD
 COPY frontend/ ./frontend/
-# Le build va créer le dossier /app/frontend/out
+# ICI : On génère les fichiers statiques dans /app/frontend/out
 RUN cd frontend && npm run build
 
-# On installe le back
+# 2. Installation du Backend
 COPY backend/package*.json ./backend/
 RUN cd backend && npm install
 COPY backend/ ./backend/
 
-# Etape cruciale : on vérifie que le dossier out existe (pour le debug logs)
-RUN ls -la /app/frontend/out
-
 EXPOSE 3000
 
+# 3. ON LANCE UNIQUEMENT LE BACKEND
+# On ne veut PAS voir "Next.js Turbopack" dans les logs au démarrage
 CMD ["node", "backend/index.js"]
