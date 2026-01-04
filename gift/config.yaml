@@ -10,3 +10,5 @@ init: false
 ingress: true
 ingress_port: 3000
 panel_icon: "mdi:gift"
+ports:
+  3001/tcp: 3001
