@@ -8,27 +8,22 @@ export default function RegisterPage() {
   const router = useRouter();
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    console.log("Clic détecté !"); // Si tu ne vois pas ça dans F12, le problème est ici.
+  e.preventDefault();
+  
+  // Le ../ est crucial pour remonter d'un niveau par rapport au dossier /register/
+  const res = await fetch('../api/auth/register', { 
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(form),
+  });
 
-    try {
-      // ON ENLÈVE LE SLASH AVANT 'api'
-      const res = await fetch('api/auth/register', { 
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
-      });
-
-      if (res.ok) {
-        alert("Inscription réussie !");
-        router.push('../'); // Retour au login
-      } else {
-        alert("Erreur lors de l'inscription");
-      }
-    } catch (err) {
-      console.error("Erreur réseau :", err);
-    }
-  };
+  if (res.ok) {
+    alert("Compte créé !");
+    router.push('../'); 
+  } else {
+    alert("Erreur lors de l'inscription");
+  }
+};
 
   return (
     <div style={{ padding: '2rem', color: 'black', background: 'white' }}>
