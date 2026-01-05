@@ -1,34 +1,40 @@
 # --- Étape 1 : Installation des dépendances ---
-FROM node:22-alpine AS deps
-RUN apk add --no-cache libc6-compat
+# On passe de alpine à bullseye-slim pour avoir la compatibilité glibc
+FROM node:22-bullseye-slim AS deps
+RUN apt-get update && apt-get install -y openssl
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 
 # --- Étape 2 : Construction (Build) ---
-FROM node:22-alpine AS builder
+FROM node:22-bullseye-slim AS builder
+# Installation d'openssl nécessaire pour Prisma
+RUN apt-get update && apt-get install -y openssl
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# On génère le client Prisma avant le build Next.js
+# On génère le client Prisma
 RUN npx prisma generate
 RUN npm run build
 
 # --- Étape 3 : Runner ---
-FROM node:22-alpine AS runner
+FROM node:22-bullseye-slim AS runner
+RUN apt-get update && apt-get install -y openssl
 WORKDIR /app
 
 ENV NODE_ENV=production
 ENV PORT=3000
 
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
+# Création de l'utilisateur pour la sécurité
+RUN groupadd --system --gid 1001 nodejs
+RUN useradd --system --uid 1001 nextjs
 
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
+COPY --from=builder /app/prisma ./prisma
 
 USER nextjs
 
