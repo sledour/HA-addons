@@ -9,17 +9,46 @@ generator client {
 }
 
 model User {
-  id            String     @id @default(cuid())
+  id            String    @id @default(cuid())
   name          String?
-  email         String     @unique
-  password      String     
+  email         String?   @unique
+  password      String?   // Optionnel pour les comptes Google
+  image         String?   // Photo de profil Google
+  emailVerified DateTime?
+  accounts      Account[] // Pour la liaison Google/OAuth
+  sessions      Session[]
   wishlists     Wishlist[] @relation("Owner")
-  sharedWithMe  Wishlist[] @relation("SharedWith")
+  sharedLists   Wishlist[] @relation("SharedWith")
+  createdAt     DateTime  @default(now())
+}
+
+// Modèles nécessaires pour NextAuth / OAuth
+model Account {
+  id                 String  @id @default(cuid())
+  userId             String
+  type               String
+  provider           String
+  providerAccountId  String
+  access_token       String?
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String?
+  user               User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Wishlist {
   id          String    @id @default(cuid())
-  title       String
+  name        String
   isPublic    Boolean   @default(false)
   owner       User      @relation("Owner", fields: [ownerId], references: [id])
   ownerId     String
