@@ -1,6 +1,6 @@
 name: "Wisharr"
 description: "L'outil de gestion de listes de souhaits et de suivi de prix pour votre foyer."
-version: "0.1.0"
+version: "0.0.1"
 slug: "wisharr"
 arch:
 - aarch64
@@ -17,5 +17,5 @@ options:
   log_level: "info"
   port: 3000
 schema:
-  log_level: "fatal|error|warn|info|debug|trace"
+  log_level: "list(fatal|error|warn|info|debug|trace)"
   port: "port"
