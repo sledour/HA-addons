@@ -4,7 +4,7 @@ FROM node:22-bullseye-slim AS deps
 RUN apt-get update && apt-get install -y openssl
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci
+RUN npm install
 
 # --- Étape 2 : Construction (Build) ---
 FROM node:22-bullseye-slim AS builder
