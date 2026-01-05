@@ -1,11 +1,43 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
-}
+// prisma/schema.prisma
 
 datasource db {
   provider = "sqlite"
+  url      = "file:/data/wisharr.db" // Important pour la persistance dans HA
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id            String     @id @default(cuid())
+  name          String?
+  email         String     @unique
+  password      String     
+  wishlists     Wishlist[] @relation("Owner")
+  sharedWithMe  Wishlist[] @relation("SharedWith")
+}
+
+model Wishlist {
+  id          String    @id @default(cuid())
+  title       String
+  isPublic    Boolean   @default(false)
+  owner       User      @relation("Owner", fields: [ownerId], references: [id])
+  ownerId     String
+  sharedUsers User[]    @relation("SharedWith")
+  products    Product[]
+  createdAt   DateTime  @default(now())
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  name        String
+  price       Float?
+  currency    String   @default("EUR")
+  storeName   String?
+  productUrl  String
+  imageUrl    String?
+  wishlist    Wishlist @relation(fields: [wishlistId], references: [id])
+  wishlistId  String
+  lastUpdated DateTime @updatedAt
 }
