@@ -11,7 +11,7 @@ export default function LoginPage() {
 
     const handleLogin = async (e) => {
         e.preventDefault();
-        console.log("UX: Clic Connexion");
+        console.log("UX: Tentative de connexion...");
 
         try {
             const res = await fetch('api/auth/login', { 
@@ -20,12 +20,20 @@ export default function LoginPage() {
                 body: JSON.stringify({ email, password }),
             });
 
+            // 1. On récupère le JSON renvoyé par le serveur
+            const data = await res.json();
+
             if (res.ok) {
-                console.log("UX: Redirection Dashboard");
-                router.push('dashboard/'); // Chemin relatif sans / au début
+                // ✅ Le serveur a répondu 200 (OK)
+                console.log("UX: Connexion réussie !");
+                router.push('dashboard/'); 
+            } else {
+                // ❌ Le serveur a répondu 401 ou 500
+                alert(data.error || "Identifiants incorrects");
             }
         } catch (err) {
             console.error("UX Error:", err);
+            alert("Erreur de connexion au serveur.");
         }
     };
 
