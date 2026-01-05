@@ -15,6 +15,7 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 # On génère le client Prisma
+RUN mkdir -p /data
 RUN npx prisma generate
 RUN npm run build
 
