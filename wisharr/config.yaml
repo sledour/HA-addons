@@ -1,6 +1,6 @@
 name: "Wisharr"
 description: "L'outil de gestion de listes de souhaits et de suivi de prix pour votre foyer."
-version: "0.0.1"
+version: "0.0.2"
 slug: "wisharr"
 arch:
 - aarch64
