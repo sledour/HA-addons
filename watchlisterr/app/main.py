@@ -79,7 +79,7 @@ def read_root():
                 "name": my_profile['username'],
                 "type": "Admin",
                 "watchlist_count": len(my_watchlist),
-                "items": my_watchlist[:3] # On limite à 3 pour la lisibilité
+                "items": my_watchlist
             })
 
         # On traite les amis
@@ -89,7 +89,7 @@ def read_root():
                 "name": friend['username'],
                 "type": "Friend",
                 "watchlist_count": len(friend_watchlist),
-                "items": friend_watchlist[:3]
+                "items": friend_watchlist
             })
 
         return {
