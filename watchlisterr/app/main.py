@@ -62,56 +62,43 @@ def get_hass_options():
 def read_root():
     try:
         options = get_hass_options()
-        
-        # --- Overseerr ---
         ov_client = OverseerrClient(options.get('overseerr_url'), options.get('overseerr_api_key'))
-        ov_status = ov_client.get_status()
-        ov_users = ov_client.get_users() if ov_status.get("connected") else []
-
-        # --- Plex ---
-        plex_token = options.get('plex_token')
-        plex_all_identities = []
-        plex_connected = False
-        test_watchlist = []
+        plex_client = PlexClient(options.get('plex_token'))
         
-        if plex_token:
-            plex_client = PlexClient(plex_token)
-            
-            # 1. Ton Profil
-            my_profile = plex_client.get_my_profile()
-            if my_profile:
-                plex_all_identities.append(my_profile)
-                plex_connected = True
-                logger.info(f"Profil admin trouvé : {my_profile['username']} ({my_profile['plex_id']})")
-                
-                # TEST : On récupère TA propre watchlist
-                test_watchlist = plex_client.get_watchlist()
-            
-            # 2. Tes Amis
-            friends_data = plex_client.get_friends()
-            if friends_data:
-                plex_all_identities.extend(friends_data)
+        # 1. On récupère d'abord tout le monde (Admin + Amis)
+        my_profile = plex_client.get_my_profile()
+        friends = plex_client.get_friends() or []
+        
+        # 2. On construit le mapping et on récupère les watchlists
+        full_report = []
+        
+        # On traite d'abord ton profil (sledour)
+        if my_profile:
+            my_watchlist = plex_client.get_watchlist() # Sans ID = Self
+            full_report.append({
+                "name": my_profile['username'],
+                "type": "Admin",
+                "watchlist_count": len(my_watchlist),
+                "items": my_watchlist[:3] # On limite à 3 pour la lisibilité
+            })
 
-        # --- Matching ---
-        matching_table = []
-        for ov_user in ov_users:
-            match = next((p for p in plex_all_identities if str(p['username']).lower() == str(ov_user['name']).lower()), None)
-            matching_table.append({
-                "name": ov_user['name'],
-                "overseerr_id": ov_user['id'],
-                "plex_uuid": match['plex_id'] if match else "NON TROUVÉ",
-                "status": "Match OK" if match else "Non trouvé sur Plex"
+        # On traite les amis
+        for friend in friends:
+            friend_watchlist = plex_client.get_watchlist(friend['plex_id']) # Avec ID = Friend
+            full_report.append({
+                "name": friend['username'],
+                "type": "Friend",
+                "watchlist_count": len(friend_watchlist),
+                "items": friend_watchlist[:3]
             })
 
         return {
-            "status": "Watchlisterr is running",
-            "connections": {"overseerr": ov_status.get("connected"), "plex": plex_connected},
-            "my_watchlist_preview": test_watchlist[:5], # On affiche les 5 premiers pour tester
-            "sync_mapping": matching_table
+            "status": "Watchlisterr - Plex Data Ready",
+            "plex_watchlists": full_report
         }
 
     except Exception as e:
-        logger.error(f"Erreur Ingress : {e}")
+        logger.error(f"Erreur test global Plex: {e}")
         return {"error": str(e)}
 
 @app.get("/check-overseerr")
