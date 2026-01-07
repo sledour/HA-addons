@@ -44,27 +44,39 @@ class PlexClient:
             logger.error(f"Erreur Friends: {e}")
             return None
 
-    def get_watchlist(self, plex_uuid):
-        """Récupère la watchlist d'un utilisateur (soi-même ou ami)."""
-        query = {
-            "query": """
+    def get_watchlist(self, plex_uuid=None):
+        """Récupère la watchlist. Si plex_uuid est None, récupère celle du porteur du token."""
+        # Si on demande sa propre watchlist, on ne passe pas de userId dans la requête
+        if plex_uuid:
+            query_str = """
                 query GetWatchlist($userId: ID!) {
                     watchlistV2(userId: $userId, first: 20) {
-                        nodes {
-                            title
-                            type
-                            year
-                        }
+                        nodes { title type year }
                     }
                 }
-            """,
-            "variables": {"userId": plex_uuid}
-        }
+            """
+            variables = {"userId": plex_uuid}
+        else:
+            # Requête simplifiée pour le compte "Self"
+            query_str = """
+                query GetMyWatchlist {
+                    watchlistV2(first: 20) {
+                        nodes { title type year }
+                    }
+                }
+            """
+            variables = {}
+
         try:
-            response = requests.post(self.url, headers=self.headers, json=query, timeout=15)
+            response = requests.post(
+                self.url, 
+                headers=self.headers, 
+                json={"query": query_str, "variables": variables}, 
+                timeout=15
+            )
             response.raise_for_status()
             data = response.json()
             return data.get('data', {}).get('watchlistV2', {}).get('nodes', [])
         except Exception as e:
-            logger.error(f"Erreur Watchlist pour {plex_uuid}: {e}")
+            logger.error(f"Erreur Watchlist (ID: {plex_uuid}): {e}")
             return []

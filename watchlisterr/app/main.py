@@ -85,7 +85,7 @@ def read_root():
                 logger.info(f"Profil admin trouvé : {my_profile['username']} ({my_profile['plex_id']})")
                 
                 # TEST : On récupère TA propre watchlist
-                test_watchlist = plex_client.get_watchlist(my_profile['plex_id'])
+                test_watchlist = plex_client.get_watchlist()
             
             # 2. Tes Amis
             friends_data = plex_client.get_friends()
