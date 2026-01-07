@@ -52,7 +52,7 @@ class PlexClient:
                     continue
         return None
 
-    def find_tmdb_id_on_server(self, title, year):
+    def find_tmdb_id_on_server(self, title, year, media_type):
         """
         Cherche un contenu sur ton serveur distant pour extraire son ID TMDB.
         Sert de base de référence pour les watchlists des amis.
@@ -67,14 +67,20 @@ class PlexClient:
                 "title": title,
                 "X-Plex-Token": self.token
             }
-            # Note: On ne filtre pas par année dans les params car Plex est parfois capricieux 
-            # sur le format. On filtrera manuellement après.
             response = requests.get(url, headers=self.headers, params=params, timeout=10)
             
             if response.status_code == 200:
                 metadata = response.json().get('MediaContainer', {}).get('Metadata', [])
                 for item in metadata:
-                    # Vérification de l'année pour éviter les faux positifs (ex: version 1998 vs 2024)
+                    # --- FILTRE PAR TYPE (NOUVEAU) ---
+                    raw_type = item.get('type', '').lower()
+                    # Conversion type Plex -> standard
+                    current_item_type = "tv" if raw_type in ["show", "series"] else "movie"
+                    
+                    if current_item_type != media_type:
+                        continue
+
+                    # --- FILTRE PAR ANNÉE ---
                     item_year = item.get('year')
                     if not year or not item_year or str(item_year) == str(year):
                         return self.extract_tmdb_id(item.get('Guid', []))
@@ -146,7 +152,7 @@ class PlexClient:
                         "title": n.get('title'),
                         "type": clean_type,
                         "year": n.get('year'),
-                        "tmdb_id": None # Sera éventuellement cherché sur le serveur par main.py
+                        "tmdb_id": None # Cherché par main.py
                     })
 
             return items
