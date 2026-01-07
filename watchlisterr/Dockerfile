@@ -1,6 +1,6 @@
 FROM ghcr.io/home-assistant/amd64-base:latest
 
-# Installation explicite de Python3 et Pip3 via apk
+# Installation de Python et des outils nécessaires
 RUN apk add --no-cache \
     python3 \
     py3-pip \
@@ -8,28 +8,25 @@ RUN apk add --no-cache \
     musl-dev \
     linux-headers
 
-# Création du dossier de travail
 WORKDIR /app
 
-# Copie des fichiers de dépendances
+# Copie et installation des dépendances
 COPY requirements.txt .
-
-# Installation des librairies Python
-# On utilise --break-system-packages car Alpine/HASS sont restrictifs
 RUN pip3 install --no-cache-dir --break-system-packages -r requirements.txt
 
-# Copie du code source
+# Copie du code applicatif
 COPY app/ /app/
 
-# Copie du script de lancement à la racine
-COPY run.sh /run.sh
-RUN chmod a+x /run.sh
+# Au lieu de COPY run.sh, on crée le script directement ici pour garantir le format Linux (LF)
+RUN echo '#!/usr/bin/with-contenu-env bashio' > /launch.sh && \
+    echo 'echo "-------------------------------------------------------"' >> /launch.sh && \
+    echo 'echo "   _    _  _  _  _  _  _  _  _  _  _  _  _  _  _   "' >> /launch.sh && \
+    echo 'echo "  | |  | |/ || || || || || || || || || || || |  "' >> /launch.sh && \
+    echo 'echo "  | |  | | WATCHLISTERR - STARTING...          |  "' >> /launch.sh && \
+    echo 'echo "  |_|  |_|_||_||_||_||_||_||_||_||_||_||_||_|_|  "' >> /launch.sh && \
+    echo 'echo "-------------------------------------------------------"' >> /launch.sh && \
+    echo 'python3 /app/main.py' >> /launch.sh && \
+    chmod a+x /launch.sh
 
-# Nettoyage des caractères invisibles (Windows/Dos) au cas où
-RUN sed -i 's/\r$//' /run.sh
-
-WORKDIR /app
-COPY app/ /app/
-
-# On lance le script depuis la racine
-CMD [ "/run.sh" ]
+# On pointe sur le nouveau script généré proprement par Docker
+CMD [ "/launch.sh" ]
