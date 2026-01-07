@@ -5,6 +5,7 @@ import os
 from fastapi import FastAPI
 import uvicorn
 from overseerr_api import OverseerrClient
+from plex_api import PlexClient
 
 # 1. Configuration des logs pour HASS
 logging.basicConfig(
@@ -49,32 +50,40 @@ def get_hass_options():
 @app.get("/")
 def read_root():
     options = get_hass_options()
-    url = options.get('overseerr_url')
-    api_key = options.get('overseerr_api_key')
     
-    if not url or not api_key:
-        return {
-            "status": "Watchlisterr is running",
-            "overseerr": "Configuration manquante"
-        }
+    # --- Overseerr Part ---
+    ov_url = options.get('overseerr_url')
+    ov_key = options.get('overseerr_api_key')
+    ov_client = OverseerrClient(ov_url, ov_key)
+    ov_status = ov_client.get_status()
+    ov_users = ov_client.get_users() if ov_status["connected"] else []
 
-    client = OverseerrClient(url, api_key)
+    # --- Plex Part ---
+    plex_token = options.get('plex_token')
+    plex_friends = []
+    plex_connected = False
     
-    # 1. On vérifie la connexion
-    status_result = client.get_status()
-    
-    # 2. Si connecté, on récupère les users
-    users = []
-    if status_result["connected"]:
-        users = client.get_users()
-    
-    # 3. On affiche tout d'un coup
+    if plex_token:
+        plex_client = PlexClient(plex_token)
+        friends_data = plex_client.get_friends()
+        if friends_data is not None:
+            plex_connected = True
+            plex_friends = friends_data
+
+    # --- Combined Response ---
     return {
         "status": "Watchlisterr is running",
-        "overseerr_connection": status_result["connected"],
-        "overseerr_version": status_result.get("details", {}).get("version", "N/A") if status_result["connected"] else "N/A",
-        "users_found_count": len(users),
-        "users_mapping": users
+        "overseerr": {
+            "connected": ov_status["connected"],
+            "version": ov_status.get("details", {}).get("version", "N/A"),
+            "users_count": len(ov_users),
+            "users": ov_users
+        },
+        "plex": {
+            "connected": plex_connected,
+            "friends_count": len(plex_friends),
+            "friends": plex_friends
+        }
     }
 
 @app.get("/check-overseerr")
