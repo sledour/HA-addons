@@ -32,7 +32,7 @@ def get_hass_options():
     return {}
 
 def run_sync():
-    """Logique de scan déplacée dans une fonction pour le cache"""
+    """Logique de scan avec double vérification TMDB (Watchlist + Serveur)"""
     global CACHE, IS_SCANNING
     if IS_SCANNING:
         return
@@ -41,8 +41,11 @@ def run_sync():
     try:
         logger.info("Début du scan en arrière-plan...")
         options = get_hass_options()
+        
+        # Initialisation des clients
         ov_client = OverseerrClient(options.get('overseerr_url'), options.get('overseerr_api_key'))
-        plex_client = PlexClient(options.get('plex_token'))
+        # Utilisation de l'URL du serveur Plex passée en config
+        plex_client = PlexClient(options.get('plex_token'), options.get('plex_server_url'))
         
         my_profile = plex_client.get_my_profile()
         friends = plex_client.get_friends() or []
@@ -63,7 +66,24 @@ def run_sync():
             stats["total_plex"] += user_total
             
             for item in watchlist:
-                match = ov_client.search_content(item['title'], item['year'], item['type'])
+                tmdb_id = item.get('tmdb_id')
+
+                # --- NOUVEAUTÉ : RECHERCHE CROISÉE SUR LE SERVEUR ---
+                # Si l'ID TMDB n'est pas dans la watchlist (cas fréquent des amis),
+                # on demande à notre propre serveur s'il connaît le contenu.
+                if not tmdb_id:
+                    tmdb_id = plex_client.find_tmdb_id_on_server(item['title'], item['year'])
+                    if tmdb_id:
+                        logger.info(f"ID TMDB {tmdb_id} récupéré sur le serveur pour : {item['title']}")
+
+                # --- VÉRIFICATION OVERSEERR ---
+                if tmdb_id:
+                    # Si on a un ID, on demande le statut direct (zéro erreur de matching)
+                    match = ov_client.get_media_status(tmdb_id, item['type'])
+                else:
+                    # Sinon, on tente la recherche textuelle classique
+                    match = ov_client.search_content(item['title'], item['year'], item['type'])
+                
                 if match['status'] == "Déjà présent sur Plex":
                     stats["already_on_plex"] += 1
                 elif match.get('can_request'):
@@ -74,7 +94,7 @@ def run_sync():
                     "year": item['year'],
                     "type": item['type'],
                     "overseerr_status": match['status'],
-                    "tmdb_id": match['tmdb_id'],
+                    "tmdb_id": tmdb_id or match.get('tmdb_id'),
                     "can_request": match.get('can_request', False)
                 })
             
@@ -101,20 +121,14 @@ def run_sync():
 
 @app.on_event("startup")
 def startup_event():
-    # Lancement d'un scan immédiat au démarrage dans un thread séparé
     Thread(target=run_sync).start()
 
 @app.get("/")
 def read_root():
-    """Renvoie instantanément le dernier cache"""
-    return {
-        "scan_in_progress": IS_SCANNING,
-        "results": CACHE
-    }
+    return {"scan_in_progress": IS_SCANNING, "results": CACHE}
 
 @app.get("/sync")
 def force_sync():
-    """Permet de forcer un scan manuellement"""
     if not IS_SCANNING:
         Thread(target=run_sync).start()
         return {"message": "Scan lancé"}
@@ -132,7 +146,6 @@ def get_overseerr_users():
     client = OverseerrClient(options.get('overseerr_url'), options.get('overseerr_api_key'))
     return {"users": client.get_users()}
 
-# Lancement
 if __name__ == "__main__":
     logger.info("Démarrage de Uvicorn...")
     uvicorn.run(app, host="0.0.0.0", port=1604)
