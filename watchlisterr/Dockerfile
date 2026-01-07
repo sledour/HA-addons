@@ -1,6 +1,6 @@
 FROM ghcr.io/home-assistant/amd64-base:latest
 
-# Installation de Python et des outils nécessaires
+# Installation de Python et Pip
 RUN apk add --no-cache \
     python3 \
     py3-pip \
@@ -10,23 +10,13 @@ RUN apk add --no-cache \
 
 WORKDIR /app
 
-# Copie et installation des dépendances
+# Installation des dépendances
 COPY requirements.txt .
 RUN pip3 install --no-cache-dir --break-system-packages -r requirements.txt
 
-# Copie du code applicatif
+# Copie du code
 COPY app/ /app/
 
-# Au lieu de COPY run.sh, on crée le script directement ici pour garantir le format Linux (LF)
-RUN echo '#!/usr/bin/with-contenu-env bashio' > /launch.sh && \
-    echo 'echo "-------------------------------------------------------"' >> /launch.sh && \
-    echo 'echo "   _    _  _  _  _  _  _  _  _  _  _  _  _  _  _   "' >> /launch.sh && \
-    echo 'echo "  | |  | |/ || || || || || || || || || || || |  "' >> /launch.sh && \
-    echo 'echo "  | |  | | WATCHLISTERR - STARTING...          |  "' >> /launch.sh && \
-    echo 'echo "  |_|  |_|_||_||_||_||_||_||_||_||_||_||_||_|_|  "' >> /launch.sh && \
-    echo 'echo "-------------------------------------------------------"' >> /launch.sh && \
-    echo 'python3 /app/main.py' >> /launch.sh && \
-    chmod a+x /launch.sh
-
-# On pointe sur le nouveau script généré proprement par Docker
-CMD [ "/launch.sh" ]
+# Au lieu d'un script externe, on demande à HASS de lancer directement Python
+# On utilise la forme "exec" pour que S6 puisse le gérer
+CMD ["python3", "/app/main.py"]
