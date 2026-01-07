@@ -33,17 +33,26 @@ def get_hass_options():
 def read_root():
     return {"status": "Watchlisterr is running"}
 
-@app.get("/test-overseerr")
-def test_overseerr():
+@app.get("/check-overseerr")
+def check_overseerr():
     options = get_hass_options()
-    client = OverseerrClient(options.get('overseerr_url', ''), options.get('overseerr_api_key', ''))
+    url = options.get('overseerr_url')
+    api_key = options.get('overseerr_api_key')
     
-    connected = client.test_connection()
-    if not connected:
-        return {"error": "Connexion échouée à Overseerr"}
+    if not url or not api_key:
+        return {
+            "connected": False, 
+            "error": "URL ou Clé API manquante dans la configuration de l'addon"
+        }
     
-    users = client.get_users_mapping()
-    return {"connected": True, "users": users}
+    client = OverseerrClient(url, api_key)
+    result = client.get_status()
+    
+    if result["connected"]:
+        # On log le succès dans les logs de l'addon
+        logger.info(f"Connexion réussie à Overseerr version: {result['details'].get('version')}")
+    
+    return result
 
 # Lancement direct (sans condition) pour garantir que S6 voit le processus
 logger.info("Démarrage de Uvicorn...")

@@ -12,30 +12,21 @@ class OverseerrClient:
             "Content-Type": "application/json"
         }
 
-    def test_connection(self):
-        """Vérifie si l'URL et la clé API sont valides."""
+    def get_status(self):
+        """Vérifie l'état de santé d'Overseerr."""
         try:
-            response = requests.get(f"{self.url}/api/v1/status", headers=self.headers, timeout=5)
-            return response.status_code == 200
-        except Exception as e:
-            logger.error(f"Erreur connexion Overseerr: {e}")
-            return False
-
-    def get_users_mapping(self):
-        """Récupère la liste des utilisateurs et retourne un mapping simplifié."""
-        try:
-            response = requests.get(f"{self.url}/api/v1/user", headers=self.headers, timeout=10)
-            response.raise_for_status()
-            data = response.json()
+            # L'endpoint /status est parfait pour valider la connexion
+            response = requests.get(f"{self.url}/api/v1/status", headers=self.headers, timeout=10)
             
-            mapping = []
-            for user in data.get('results', []):
-                mapping.append({
-                    "overseerr_id": user.get('id'),
-                    "plex_id": user.get('plexId'),
-                    "name": user.get('displayName') or user.get('plexUsername')
-                })
-            return mapping
+            if response.status_code == 200:
+                return {
+                    "connected": True,
+                    "details": response.json()
+                }
+            elif response.status_code == 401:
+                return {"connected": False, "error": "Clé API invalide (401)"}
+            else:
+                return {"connected": False, "error": f"Erreur HTTP {response.status_code}"}
         except Exception as e:
-            logger.error(f"Erreur lors de la récupération des utilisateurs: {e}")
-            return None
+            logger.error(f"Erreur de connexion Overseerr: {e}")
+            return {"connected": False, "error": str(e)}
