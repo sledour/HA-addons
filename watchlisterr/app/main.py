@@ -24,6 +24,13 @@ print("-------------------------------------------------------")
 
 app = FastAPI()
 
+def get_hass_options():
+    options_path = "/data/options.json"
+    if os.path.exists(options_path):
+        with open(options_path, 'r') as f:
+            return json.load(f)
+    return {}
+
 @app.on_event("startup")
 def startup_event():
     logger.info("Vérification des connexions au démarrage...")
@@ -52,13 +59,6 @@ def startup_event():
     else:
         logger.warning("VÉRIFICATION : Token Plex manquant")
 
-def get_hass_options():
-    options_path = "/data/options.json"
-    if os.path.exists(options_path):
-        with open(options_path, 'r') as f:
-            return json.load(f)
-    return {}
-
 @app.get("/")
 def read_root():
     try:
@@ -70,47 +70,62 @@ def read_root():
         friends = plex_client.get_friends() or []
         
         full_report = []
-        global_count = 0  # Compteur global
+        stats = {
+            "total_plex": 0,
+            "already_on_plex": 0,
+            "to_overseerr": 0
+        }
         
-        # 1. Traitement Admin
+        # Liste de tous les comptes à traiter
+        users_to_process = []
         if my_profile:
-            my_watchlist = plex_client.get_watchlist()
-            count = len(my_watchlist)
-            global_count += count
+            users_to_process.append({"plex_id": None, "username": my_profile['username'], "role": "Admin"})
+        
+        for f in friends:
+            users_to_process.append({"plex_id": f['plex_id'], "username": f['username'], "role": "Friend"})
+
+        # Traitement de chaque utilisateur
+        for user in users_to_process:
+            watchlist = plex_client.get_watchlist(user['plex_id'])
+            items_with_status = []
             
-            logger.info(f"SYNCHRO : {my_profile['username']} (Admin) - {count} items trouvés")
+            user_total = len(watchlist)
+            stats["total_plex"] += user_total
+            
+            for item in watchlist:
+                # Match avec Overseerr
+                match = ov_client.search_content(item['title'], item['year'], item['type'])
+                
+                # Mise à jour des compteurs globaux
+                if match['status'] == "Déjà présent sur Plex":
+                    stats["already_on_plex"] += 1
+                elif match['can_request']:
+                    stats["to_overseerr"] += 1
+
+                items_with_status.append({
+                    "title": item['title'],
+                    "year": item['year'],
+                    "type": item['type'],
+                    "overseerr_status": match['status'],
+                    "tmdb_id": match['tmdb_id'],
+                    "can_request": match['can_request']
+                })
+
+            logger.info(f"SYNCHRO : {user['username']} ({user['role']}) - {user_total} items analysés")
             
             full_report.append({
-                "name": my_profile['username'],
-                "type": "Admin",
-                "watchlist_count": count,
-                "items": my_watchlist
+                "name": user['username'],
+                "type": user['role'],
+                "watchlist_count": user_total,
+                "items": items_with_status
             })
 
-        # 2. Traitement Amis
-        for friend in friends:
-            friend_watchlist = plex_client.get_watchlist(friend['plex_id'])
-            count = len(friend_watchlist)
-            global_count += count
-            
-            logger.info(f"SYNCHRO : {friend['username']} (Friend) - {count} items trouvés")
-            
-            full_report.append({
-                "name": friend['username'],
-                "type": "Friend",
-                "watchlist_count": count,
-                "items": friend_watchlist
-            })
-
-        # Log du total final
-        logger.info(f"--- TOTAL : {global_count} éléments récupérés sur l'ensemble des Watchlists ---")
+        # Log final détaillé
+        logger.info(f"--- RÉSUMÉ : {stats['total_plex']} items trouvés | {stats['already_on_plex']} déjà sur Plex | {stats['to_overseerr']} à envoyer vers Overseerr ---")
 
         return {
-            "status": "Watchlisterr - Data Synced",
-            "stats": {
-                "total_items": global_count,
-                "users_scanned": len(full_report)
-            },
+            "status": "Watchlisterr - Analysis Complete",
+            "stats": stats,
             "plex_watchlists": full_report
         }
 
@@ -125,32 +140,19 @@ def check_overseerr():
     api_key = options.get('overseerr_api_key')
     
     if not url or not api_key:
-        return {
-            "connected": False, 
-            "error": "URL ou Clé API manquante dans la configuration de l'addon"
-        }
+        return {"connected": False, "error": "URL ou Clé API manquante"}
     
     client = OverseerrClient(url, api_key)
     result = client.get_status()
-    
-    if result["connected"]:
-        # On log le succès dans les logs de l'addon
-        logger.info(f"Connexion réussie à Overseerr version: {result['details'].get('version')}")
-    
     return result
+
 @app.get("/overseerr-users")
 def get_overseerr_users():
     options = get_hass_options()
     client = OverseerrClient(options.get('overseerr_url'), options.get('overseerr_api_key'))
-    
     users = client.get_users()
-    
-    logger.info(f"Utilisateurs Overseerr trouvés : {len(users)}")
-    return {
-        "count": len(users),
-        "users": users
-    }
+    return {"count": len(users), "users": users}
 
-# Lancement direct (sans condition) pour garantir que S6 voit le processus
+# Lancement
 logger.info("Démarrage de Uvicorn...")
 uvicorn.run(app, host="0.0.0.0", port=1604, log_level="info")
