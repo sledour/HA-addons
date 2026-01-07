@@ -30,3 +30,29 @@ class OverseerrClient:
         except Exception as e:
             logger.error(f"Erreur de connexion Overseerr: {e}")
             return {"connected": False, "error": str(e)}
+            
+    def get_users(self):
+        """Récupère la liste des utilisateurs Overseerr ayant un plexId."""
+        try:
+            # On récupère les utilisateurs (pagination par défaut à 1000 pour être large)
+            response = requests.get(
+                f"{self.url}/api/v1/user?take=20&skip=0&sort=created", 
+                headers=self.headers, 
+                timeout=10
+            )
+            response.raise_for_status()
+            data = response.json()
+            
+            # On ne garde que ceux qui ont un plexId (non nul)
+            users = []
+            for u in data.get('results', []):
+                if u.get('plexId'):
+                    users.append({
+                        "id": u.get('id'),
+                        "plexId": u.get('plexId'),
+                        "name": u.get('displayName') or u.get('plexUsername')
+                    })
+            return users
+        except Exception as e:
+            logger.error(f"Erreur lors de la récupération des utilisateurs : {e}")
+            return []

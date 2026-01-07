@@ -48,7 +48,34 @@ def get_hass_options():
 
 @app.get("/")
 def read_root():
-    return {"status": "Watchlisterr is running"}
+    options = get_hass_options()
+    url = options.get('overseerr_url')
+    api_key = options.get('overseerr_api_key')
+    
+    if not url or not api_key:
+        return {
+            "status": "Watchlisterr is running",
+            "overseerr": "Configuration manquante"
+        }
+
+    client = OverseerrClient(url, api_key)
+    
+    # 1. On vérifie la connexion
+    status_result = client.get_status()
+    
+    # 2. Si connecté, on récupère les users
+    users = []
+    if status_result["connected"]:
+        users = client.get_users()
+    
+    # 3. On affiche tout d'un coup
+    return {
+        "status": "Watchlisterr is running",
+        "overseerr_connection": status_result["connected"],
+        "overseerr_version": status_result.get("details", {}).get("version", "N/A") if status_result["connected"] else "N/A",
+        "users_found_count": len(users),
+        "users_mapping": users
+    }
 
 @app.get("/check-overseerr")
 def check_overseerr():
@@ -70,6 +97,18 @@ def check_overseerr():
         logger.info(f"Connexion réussie à Overseerr version: {result['details'].get('version')}")
     
     return result
+@app.get("/overseerr-users")
+def get_overseerr_users():
+    options = get_hass_options()
+    client = OverseerrClient(options.get('overseerr_url'), options.get('overseerr_api_key'))
+    
+    users = client.get_users()
+    
+    logger.info(f"Utilisateurs Overseerr trouvés : {len(users)}")
+    return {
+        "count": len(users),
+        "users": users
+    }
 
 # Lancement direct (sans condition) pour garantir que S6 voit le processus
 logger.info("Démarrage de Uvicorn...")
