@@ -5,9 +5,8 @@ import uuid
 logger = logging.getLogger(__name__)
 
 class PlexClient:
-    def __init__(self, token, server_url=None):
+    def __init__(self, token):
         self.token = token
-        self.server_url = server_url.rstrip('/') if server_url else None
         self.headers = {
             "X-Plex-Token": self.token,
             "Accept": "application/json",
@@ -40,55 +39,6 @@ class PlexClient:
             logger.error(f"Erreur amis: {e}")
             return None
 
-    def extract_tmdb_id(self, guid_list):
-        """Extrait l'ID TMDB depuis une liste de guids (Plex JSON format)"""
-        if not guid_list: return None
-        for g in guid_list:
-            id_val = g.get('id', '')
-            if id_val.startswith('tmdb://'):
-                try:
-                    return int(id_val.split('://')[1])
-                except (IndexError, ValueError):
-                    continue
-        return None
-
-    def find_tmdb_id_on_server(self, title, year, media_type):
-        """
-        Cherche un contenu sur ton serveur distant pour extraire son ID TMDB.
-        Sert de base de référence pour les watchlists des amis.
-        """
-        if not self.server_url:
-            return None
-            
-        try:
-            # On cherche dans toutes les bibliothèques
-            url = f"{self.server_url}/library/all"
-            params = {
-                "title": title,
-                "X-Plex-Token": self.token
-            }
-            response = requests.get(url, headers=self.headers, params=params, timeout=10)
-            
-            if response.status_code == 200:
-                metadata = response.json().get('MediaContainer', {}).get('Metadata', [])
-                for item in metadata:
-                    # --- FILTRE PAR TYPE (NOUVEAU) ---
-                    raw_type = item.get('type', '').lower()
-                    # Conversion type Plex -> standard
-                    current_item_type = "tv" if raw_type in ["show", "series"] else "movie"
-                    
-                    if current_item_type != media_type:
-                        continue
-
-                    # --- FILTRE PAR ANNÉE ---
-                    item_year = item.get('year')
-                    if not year or not item_year or str(item_year) == str(year):
-                        return self.extract_tmdb_id(item.get('Guid', []))
-            return None
-        except Exception as e:
-            logger.debug(f"Recherche serveur local échouée pour {title}: {e}")
-            return None
-
     def get_watchlist(self, plex_uuid=None):
         try:
             if not plex_uuid:
@@ -98,7 +48,7 @@ class PlexClient:
                     "X-Plex-Token": self.token,
                     "format": "json",
                     "X-Plex-Container-Start": 0,
-                    "X-Plex-Container-Size": 100,
+                    "X-Plex-Container-Size": 100, # Augmenté pour être large
                     "cache_buster": str(uuid.uuid4())[:12]
                 }
                 response = requests.get(url, headers=self.headers, params=params, timeout=15)
@@ -113,7 +63,6 @@ class PlexClient:
                                 title 
                                 type 
                                 year 
-                                guid
                             }
                         }
                     }
@@ -129,30 +78,30 @@ class PlexClient:
             data = response.json()
             items = []
 
+            # REMPLACER LES BOUCLES PAR CELLES-CI
             if not plex_uuid:
                 metadata = data.get('MediaContainer', {}).get('Metadata', [])
                 for item in metadata:
                     raw_type = item.get('type', '').lower()
+                    # Détection robuste du type
                     clean_type = "tv" if raw_type in ["show", "series", "tv", "2"] else "movie"
-                    tmdb_id = self.extract_tmdb_id(item.get('Guid', []))
                     
                     items.append({
                         "title": item.get('title'),
                         "type": clean_type,
-                        "year": item.get('year'),
-                        "tmdb_id": tmdb_id
+                        "year": item.get('year')
                     })
             else:
                 nodes = data.get('data', {}).get('user', {}).get('watchlist', {}).get('nodes', [])
                 for n in nodes:
                     raw_type = n.get('type', '').lower()
+                    # En GraphQL, les types peuvent varier selon les versions
                     clean_type = "tv" if raw_type in ["show", "series", "tv", "season", "episode"] else "movie"
                     
                     items.append({
                         "title": n.get('title'),
                         "type": clean_type,
-                        "year": n.get('year'),
-                        "tmdb_id": None # Cherché par main.py
+                        "year": n.get('year')
                     })
 
             return items
