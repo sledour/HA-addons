@@ -1,21 +1,24 @@
-# Utilisation de l'image de base Python officielle de Home Assistant
-ARG BUILD_FROM=ghcr.io/home-assistant/amd64-base-python:3.12-alpine3.20
-FROM ${BUILD_FROM}
+FROM ghcr.io/home-assistant/amd64-base:latest
 
-# Installation des dépendances système (nécessaires pour compiler certaines libs Python si besoin)
+# Installation explicite de Python3 et Pip3 via apk
 RUN apk add --no-cache \
+    python3 \
+    py3-pip \
     gcc \
     musl-dev \
     linux-headers
 
-# Dossier de travail
+# Création du dossier de travail
 WORKDIR /app
 
-# Copie et installation des dépendances Python
+# Copie des fichiers de dépendances
 COPY requirements.txt .
-RUN pip3 install --no-cache-dir -r requirements.txt
 
-# Copie du code source (le dossier app doit être au même niveau que le Dockerfile)
+# Installation des librairies Python
+# On utilise --break-system-packages car Alpine/HASS sont restrictifs
+RUN pip3 install --no-cache-dir --break-system-packages -r requirements.txt
+
+# Copie du code source
 COPY app/ /app/
 
 # Script de lancement
