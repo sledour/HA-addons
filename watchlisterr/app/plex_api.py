@@ -1,18 +1,16 @@
 import requests
 import logging
+import uuid
 
 logger = logging.getLogger(__name__)
 
 class PlexClient:
     def __init__(self, token):
         self.token = token
-        # Headers "Client" obligatoires pour Plex Discover
         self.headers = {
             "X-Plex-Token": self.token,
             "Accept": "application/json",
-            "X-Plex-Client-Identifier": "watchlisterr-ha-addon",
-            "X-Plex-Product": "Watchlisterr",
-            "X-Plex-Version": "1.0"
+            "X-Plex-Client-Identifier": "watchlisterr-ha-addon"
         }
 
     def get_my_profile(self):
@@ -44,51 +42,60 @@ class PlexClient:
     def get_watchlist(self, plex_uuid=None):
         try:
             if not plex_uuid:
-                # 1. TA WATCHLIST (API Discover)
-                # On ajoute .json à la fin pour forcer le format
-                url = "https://discover.provider.plex.tv/library/sections/watchlist/all.json"
+                # --- LOGIQUE EXACTE DU CODE SCALA ---
+                # URL de base utilisée dans getSelfWatchlist du Scala
+                url = "https://discover.provider.plex.tv/library/sections/watchlist/all"
                 params = {
                     "X-Plex-Token": self.token,
+                    "format": "json", # Important
                     "X-Plex-Container-Start": 0,
-                    "X-Plex-Container-Size": 50
+                    "X-Plex-Container-Size": 50,
+                    "cache_buster": str(uuid.uuid4())[:12] # Comme dans le Scala
                 }
                 response = requests.get(url, headers=self.headers, params=params, timeout=15)
             else:
-                # 2. WATCHLIST AMIS (GraphQL)
+                # --- LOGIQUE AMIS ---
                 url = "https://community.plex.tv/api"
                 query = """
                 query GetWatchlistHub($uuid: ID!, $first: PaginationInt!) {
                     user(id: $uuid) {
                         watchlist(first: $first) {
-                            nodes {
-                                title
-                                type
-                            }
+                            nodes { title type year }
                         }
                     }
                 }
                 """
                 variables = {"uuid": plex_uuid, "first": 50}
                 response = requests.post(url, headers=self.headers, json={"query": query, "variables": variables}, timeout=15)
-            
-            # Debug log pour voir ce que Plex répond vraiment si ça échoue encore
+
             if response.status_code != 200:
-                logger.error(f"Plex API Error {response.status_code}: {response.text[:100]}")
+                logger.error(f"Plex API Error {response.status_code} sur {'Self' if not plex_uuid else 'Friend'}")
                 return []
 
             data = response.json()
             items = []
-            
+
+            # Parsing pour Self (REST)
             if not plex_uuid:
+                # Dans l'API REST, les films sont dans MediaContainer -> Metadata
                 metadata = data.get('MediaContainer', {}).get('Metadata', [])
                 for item in metadata:
-                    items.append({"title": item.get('title'), "type": item.get('type')})
+                    items.append({
+                        "title": item.get('title'),
+                        "type": "movie" if item.get('type') == 'movie' else "tv",
+                        "year": item.get('year')
+                    })
+            # Parsing pour Amis (GraphQL)
             else:
                 nodes = data.get('data', {}).get('user', {}).get('watchlist', {}).get('nodes', [])
                 for n in nodes:
-                    items.append({"title": n.get('title'), "type": n.get('type')})
-            
+                    items.append({
+                        "title": n.get('title'),
+                        "type": "movie" if n.get('type') == 'movie' else "tv",
+                        "year": n.get('year')
+                    })
+
             return items
         except Exception as e:
-            logger.error(f"Erreur watchlist détaillée: {e}")
+            logger.error(f"Erreur watchlist: {e}")
             return []
