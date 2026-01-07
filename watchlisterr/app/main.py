@@ -69,36 +69,39 @@ def read_root():
 
     # Récupération Plex
     plex_token = options.get('plex_token')
-    plex_friends = []
+    plex_all_identities = [] # On va regrouper toi + tes amis
     plex_connected = False
+    
     if plex_token:
         plex_client = PlexClient(plex_token)
+        
+        # 1. On récupère TON profil
+        my_profile = plex_client.get_my_profile()
+        if my_profile:
+            plex_connected = True
+            plex_all_identities.append(my_profile)
+            
+        # 2. On récupère tes amis
         friends_data = plex_client.get_friends()
         if friends_data is not None:
-            plex_connected = True
-            plex_friends = friends_data
+            plex_all_identities.extend(friends_data)
 
-    # Construction de la correspondance par Username
+    # Construction de la correspondance (Matching)
     matching_table = []
     for ov_user in ov_users:
-        # On cherche si le nom Overseerr existe dans la liste Plex
-        # On met en minuscule pour éviter les problèmes de casse
-        match = next((f for f in plex_friends if f['username'].lower() == ov_user['name'].lower()), None)
+        match = next((p for p in plex_all_identities if p['username'].lower() == ov_user['name'].lower()), None)
         
         matching_table.append({
             "name": ov_user['name'],
             "overseerr_id": ov_user['id'],
-            "overseerr_plex_id": ov_user['plexId'], # L'ID numérique
-            "plex_uuid": match['plex_id'] if match else "NON TROUVÉ", # L'ID alphanumérique
-            "status": "Match OK" if match else "Ami non trouvé sur Plex"
+            "overseerr_plex_id": ov_user['plexId'],
+            "plex_uuid": match['plex_id'] if match else "NON TROUVÉ",
+            "status": "Match OK" if match else "Utilisateur non trouvé sur Plex"
         })
 
     return {
         "status": "Watchlisterr is running",
-        "connections": {
-            "overseerr": ov_status["connected"],
-            "plex": plex_connected
-        },
+        "connections": {"overseerr": ov_status["connected"], "plex": plex_connected},
         "sync_mapping": matching_table
     }
 
