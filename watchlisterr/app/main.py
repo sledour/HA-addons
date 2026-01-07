@@ -65,40 +65,56 @@ def read_root():
         ov_client = OverseerrClient(options.get('overseerr_url'), options.get('overseerr_api_key'))
         plex_client = PlexClient(options.get('plex_token'))
         
-        # 1. On récupère d'abord tout le monde (Admin + Amis)
         my_profile = plex_client.get_my_profile()
         friends = plex_client.get_friends() or []
         
-        # 2. On construit le mapping et on récupère les watchlists
         full_report = []
+        global_count = 0  # Compteur global
         
-        # On traite d'abord ton profil (sledour)
+        # 1. Traitement Admin
         if my_profile:
-            my_watchlist = plex_client.get_watchlist() # Sans ID = Self
+            my_watchlist = plex_client.get_watchlist()
+            count = len(my_watchlist)
+            global_count += count
+            
+            logger.info(f"SYNCHRO : {my_profile['username']} (Admin) - {count} items trouvés")
+            
             full_report.append({
                 "name": my_profile['username'],
                 "type": "Admin",
-                "watchlist_count": len(my_watchlist),
+                "watchlist_count": count,
                 "items": my_watchlist
             })
 
-        # On traite les amis
+        # 2. Traitement Amis
         for friend in friends:
-            friend_watchlist = plex_client.get_watchlist(friend['plex_id']) # Avec ID = Friend
+            friend_watchlist = plex_client.get_watchlist(friend['plex_id'])
+            count = len(friend_watchlist)
+            global_count += count
+            
+            logger.info(f"SYNCHRO : {friend['username']} (Friend) - {count} items trouvés")
+            
             full_report.append({
                 "name": friend['username'],
                 "type": "Friend",
-                "watchlist_count": len(friend_watchlist),
+                "watchlist_count": count,
                 "items": friend_watchlist
             })
 
+        # Log du total final
+        logger.info(f"--- TOTAL : {global_count} éléments récupérés sur l'ensemble des Watchlists ---")
+
         return {
-            "status": "Watchlisterr - Plex Data Ready",
+            "status": "Watchlisterr - Data Synced",
+            "stats": {
+                "total_items": global_count,
+                "users_scanned": len(full_report)
+            },
             "plex_watchlists": full_report
         }
 
     except Exception as e:
-        logger.error(f"Erreur test global Plex: {e}")
+        logger.error(f"Erreur lors de la récupération des données : {e}")
         return {"error": str(e)}
 
 @app.get("/check-overseerr")

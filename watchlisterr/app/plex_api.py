@@ -81,9 +81,9 @@ class PlexClient:
             if not plex_uuid:
                 metadata = data.get('MediaContainer', {}).get('Metadata', [])
                 for item in metadata:
-                    # Normalisation du type pour Overseerr
                     raw_type = item.get('type')
-                    clean_type = "movie" if raw_type == "movie" else "tv"
+                    # On considère que c'est une série SEULEMENT si c'est explicitement marqué show ou tv
+                    clean_type = "tv" if raw_type in ["show", "tv", "2"] else "movie"
                     
                     items.append({
                         "title": item.get('title'),
@@ -93,9 +93,9 @@ class PlexClient:
             else:
                 nodes = data.get('data', {}).get('user', {}).get('watchlist', {}).get('nodes', [])
                 for n in nodes:
-                    # IMPORTANT : En GraphQL, les séries sont souvent de type 'show'
                     raw_type = n.get('type')
-                    clean_type = "movie" if raw_type == "movie" else "tv"
+                    # En GraphQL, le type pour une série est souvent "show"
+                    clean_type = "tv" if raw_type in ["show", "tv", "episode"] else "movie"
                     
                     items.append({
                         "title": n.get('title'),
