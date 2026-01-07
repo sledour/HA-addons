@@ -13,28 +13,24 @@ class PlexClient:
             "Accept": "application/json"
         }
     def get_my_profile(self):
-        """Récupère l'UUID et le username du compte propriétaire du token."""
-        query = {
-            "query": """
-                query GetMyAccount {
-                    user {
-                        id
-                        username
-                    }
-                }
-            """
-        }
+        """Récupère les infos du compte principal via plex.tv/users/account."""
+        url = "https://plex.tv/users/account.json"
         try:
-            response = requests.post(self.url, headers=self.headers, json=query, timeout=10)
-            response.raise_for_status()
-            data = response.json()
-            user = data.get('data', {}).get('user', {})
-            return {
-                "plex_id": user.get('id'),
-                "username": user.get('username')
-            }
+            # On utilise le même token
+            response = requests.get(url, headers=self.headers, timeout=10)
+            if response.status_code == 200:
+                data = response.json()
+                user_data = data.get('user', {})
+                # Note: On récupère l'UUID (id) et le username
+                return {
+                    "plex_id": user_data.get('uuid') or user_data.get('id'),
+                    "username": user_data.get('username')
+                }
+            else:
+                logger.error(f"Erreur Profil Plex.tv: {response.status_code}")
+                return None
         except Exception as e:
-            logger.error(f"Erreur lors de la récupération du profil perso Plex: {e}")
+            logger.error(f"Exception Profil Plex.tv: {e}")
             return None
         
     def get_friends(self):
