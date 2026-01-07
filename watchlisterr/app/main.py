@@ -6,6 +6,7 @@ from fastapi import FastAPI
 import uvicorn
 from overseerr_api import OverseerrClient
 from plex_api import PlexClient
+from fastapi.responses import HTMLResponse
 
 # 1. Configuration des logs pour HASS
 logging.basicConfig(
@@ -58,7 +59,7 @@ def get_hass_options():
             return json.load(f)
     return {}
 
-@app.get("/")
+@app.get("/", response_class=HTMLResponse)
 def read_root():
     try:
         options = get_hass_options()
@@ -116,6 +117,26 @@ def read_root():
     except Exception as e:
         logger.error(f"Erreur lors de la récupération des données : {e}")
         return {"error": str(e)}
+    
+    html_content = f"""
+    <html>
+        <head>
+            <style>
+                body {{ font-family: sans-serif; background: #111; color: white; padding: 20px; }}
+                table {{ width: 100%; border-collapse: collapse; margin-top: 20px; }}
+                th, td {{ border: 1px solid #333; padding: 10px; text-align: left; }}
+                th {{ background: #222; }}
+                .badge-movie {{ background: #007bff; padding: 2px 6px; border-radius: 4px; font-size: 0.8em; }}
+                .badge-tv {{ background: #28a745; padding: 2px 6px; border-radius: 4px; font-size: 0.8em; }}
+            </style>
+        </head>
+        <body>
+            <h1>Watchlisterr Dashboard</h1>
+            <p>Total items: {global_count} across {len(full_report)} users.</p>
+            </body>
+    </html>
+    """
+    return html_content
 
 @app.get("/check-overseerr")
 def check_overseerr():

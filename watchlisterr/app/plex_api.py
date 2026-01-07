@@ -78,12 +78,13 @@ class PlexClient:
             data = response.json()
             items = []
 
+            # REMPLACER LES BOUCLES PAR CELLES-CI
             if not plex_uuid:
                 metadata = data.get('MediaContainer', {}).get('Metadata', [])
                 for item in metadata:
-                    raw_type = item.get('type')
-                    # On considère que c'est une série SEULEMENT si c'est explicitement marqué show ou tv
-                    clean_type = "tv" if raw_type in ["show", "tv", "2"] else "movie"
+                    raw_type = item.get('type', '').lower()
+                    # Détection robuste du type
+                    clean_type = "tv" if raw_type in ["show", "series", "tv", "2"] else "movie"
                     
                     items.append({
                         "title": item.get('title'),
@@ -93,9 +94,9 @@ class PlexClient:
             else:
                 nodes = data.get('data', {}).get('user', {}).get('watchlist', {}).get('nodes', [])
                 for n in nodes:
-                    raw_type = n.get('type')
-                    # En GraphQL, le type pour une série est souvent "show"
-                    clean_type = "tv" if raw_type in ["show", "tv", "episode"] else "movie"
+                    raw_type = n.get('type', '').lower()
+                    # En GraphQL, les types peuvent varier selon les versions
+                    clean_type = "tv" if raw_type in ["show", "series", "tv", "season", "episode"] else "movie"
                     
                     items.append({
                         "title": n.get('title'),
