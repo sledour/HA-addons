@@ -25,20 +25,31 @@ app = FastAPI()
 
 @app.on_event("startup")
 def startup_event():
-    logger.info("Vérification de la connexion Overseerr au démarrage...")
+    logger.info("Vérification des connexions au démarrage...")
     options = get_hass_options()
-    url = options.get('overseerr_url')
-    api_key = options.get('overseerr_api_key')
     
-    if url and api_key:
-        client = OverseerrClient(url, api_key)
-        result = client.get_status()
-        if result["connected"]:
-            logger.info(f"VÉRIFICATION : Connecté à Overseerr (v{result['details'].get('version')})")
+    # Check Overseerr
+    ov_url = options.get('overseerr_url')
+    ov_key = options.get('overseerr_api_key')
+    if ov_url and ov_key:
+        ov_client = OverseerrClient(ov_url, ov_key)
+        ov_res = ov_client.get_status()
+        if ov_res["connected"]:
+            logger.info(f"VÉRIFICATION : Connecté à Overseerr (v{ov_res['details'].get('version')})")
         else:
-            logger.error(f"VÉRIFICATION : Échec connexion Overseerr : {result.get('error')}")
+            logger.error(f"VÉRIFICATION : Échec Overseerr : {ov_res.get('error')}")
+
+    # Check Plex
+    plex_token = options.get('plex_token')
+    if plex_token:
+        plex_client = PlexClient(plex_token)
+        friends = plex_client.get_friends()
+        if friends is not None:
+            logger.info(f"VÉRIFICATION : Connecté à Plex (Amis trouvés: {len(friends)})")
+        else:
+            logger.error("VÉRIFICATION : Échec connexion Plex (Vérifiez le Token)")
     else:
-        logger.warning("VÉRIFICATION : Paramètres Overseerr manquants dans la config HASS")
+        logger.warning("VÉRIFICATION : Token Plex manquant")
 
 def get_hass_options():
     options_path = "/data/options.json"
@@ -51,18 +62,15 @@ def get_hass_options():
 def read_root():
     options = get_hass_options()
     
-    # --- Overseerr Part ---
-    ov_url = options.get('overseerr_url')
-    ov_key = options.get('overseerr_api_key')
-    ov_client = OverseerrClient(ov_url, ov_key)
+    # Récupération Overseerr
+    ov_client = OverseerrClient(options.get('overseerr_url'), options.get('overseerr_api_key'))
     ov_status = ov_client.get_status()
     ov_users = ov_client.get_users() if ov_status["connected"] else []
 
-    # --- Plex Part ---
+    # Récupération Plex
     plex_token = options.get('plex_token')
     plex_friends = []
     plex_connected = False
-    
     if plex_token:
         plex_client = PlexClient(plex_token)
         friends_data = plex_client.get_friends()
@@ -70,20 +78,28 @@ def read_root():
             plex_connected = True
             plex_friends = friends_data
 
-    # --- Combined Response ---
+    # Construction de la correspondance par Username
+    matching_table = []
+    for ov_user in ov_users:
+        # On cherche si le nom Overseerr existe dans la liste Plex
+        # On met en minuscule pour éviter les problèmes de casse
+        match = next((f for f in plex_friends if f['username'].lower() == ov_user['name'].lower()), None)
+        
+        matching_table.append({
+            "name": ov_user['name'],
+            "overseerr_id": ov_user['id'],
+            "overseerr_plex_id": ov_user['plexId'], # L'ID numérique
+            "plex_uuid": match['plex_id'] if match else "NON TROUVÉ", # L'ID alphanumérique
+            "status": "Match OK" if match else "Ami non trouvé sur Plex"
+        })
+
     return {
         "status": "Watchlisterr is running",
-        "overseerr": {
-            "connected": ov_status["connected"],
-            "version": ov_status.get("details", {}).get("version", "N/A"),
-            "users_count": len(ov_users),
-            "users": ov_users
+        "connections": {
+            "overseerr": ov_status["connected"],
+            "plex": plex_connected
         },
-        "plex": {
-            "connected": plex_connected,
-            "friends_count": len(plex_friends),
-            "friends": plex_friends
-        }
+        "sync_mapping": matching_table
     }
 
 @app.get("/check-overseerr")
