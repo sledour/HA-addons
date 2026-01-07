@@ -12,57 +12,59 @@ class PlexClient:
             "Content-Type": "application/json",
             "Accept": "application/json"
         }
+
     def get_my_profile(self):
-        """Récupère les infos du compte principal via plex.tv/users/account."""
+        """Récupère l'UUID du compte principal."""
         url = "https://plex.tv/users/account.json"
         try:
-            # On utilise le même token
             response = requests.get(url, headers=self.headers, timeout=10)
             if response.status_code == 200:
-                data = response.json()
-                user_data = data.get('user', {})
-                # Note: On récupère l'UUID (id) et le username
+                user_data = response.json().get('user', {})
                 return {
-                    "plex_id": user_data.get('uuid') or user_data.get('id'),
+                    "plex_id": user_data.get('uuid'),
                     "username": user_data.get('username')
                 }
-            else:
-                logger.error(f"Erreur Profil Plex.tv: {response.status_code}")
-                return None
-        except Exception as e:
-            logger.error(f"Exception Profil Plex.tv: {e}")
             return None
-        
+        except Exception as e:
+            logger.error(f"Erreur Profil: {e}")
+            return None
+
     def get_friends(self):
-        """Récupère la liste des amis Plex (ID et Username)."""
+        """Récupère la liste des amis."""
+        query = {"query": "query GetAllFriends { allFriendsV2 { user { id username } } }"}
+        try:
+            response = requests.post(self.url, headers=self.headers, json=query, timeout=15)
+            data = response.json()
+            friends = []
+            for entry in data.get('data', {}).get('allFriendsV2', []):
+                u = entry.get('user', {})
+                friends.append({"plex_id": u.get('id'), "username": u.get('username')})
+            return friends
+        except Exception as e:
+            logger.error(f"Erreur Friends: {e}")
+            return None
+
+    def get_watchlist(self, plex_uuid):
+        """Récupère la watchlist d'un utilisateur (soi-même ou ami)."""
         query = {
             "query": """
-                query GetAllFriends {
-                    allFriendsV2 {
-                        user {
-                            id
-                            username
+                query GetWatchlist($userId: ID!) {
+                    watchlistV2(userId: $userId, first: 20) {
+                        nodes {
+                            title
+                            type
+                            year
                         }
                     }
                 }
-            """
+            """,
+            "variables": {"userId": plex_uuid}
         }
         try:
             response = requests.post(self.url, headers=self.headers, json=query, timeout=15)
             response.raise_for_status()
             data = response.json()
-            
-            friends = []
-            friends_list = data.get('data', {}).get('allFriendsV2', [])
-            
-            for entry in friends_list:
-                user = entry.get('user', {})
-                if user.get('id'):
-                    friends.append({
-                        "plex_id": user.get('id'),
-                        "username": user.get('username')
-                    })
-            return friends
+            return data.get('data', {}).get('watchlistV2', {}).get('nodes', [])
         except Exception as e:
-            logger.error(f"Erreur lors de la récupération des amis Plex: {e}")
-            return None
+            logger.error(f"Erreur Watchlist pour {plex_uuid}: {e}")
+            return []
