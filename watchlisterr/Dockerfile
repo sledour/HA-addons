@@ -21,8 +21,15 @@ RUN pip3 install --no-cache-dir --break-system-packages -r requirements.txt
 # Copie du code source
 COPY app/ /app/
 
-# Script de lancement
-COPY run.sh /
+# Copie du script de lancement à la racine
+COPY run.sh /run.sh
 RUN chmod a+x /run.sh
 
+# Nettoyage des caractères invisibles (Windows/Dos) au cas où
+RUN sed -i 's/\r$//' /run.sh
+
+WORKDIR /app
+COPY app/ /app/
+
+# On lance le script depuis la racine
 CMD [ "/run.sh" ]
