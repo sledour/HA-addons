@@ -44,7 +44,6 @@ def run_sync():
         
         # Initialisation des clients
         ov_client = OverseerrClient(options.get('overseerr_url'), options.get('overseerr_api_key'))
-        # Utilisation de l'URL du serveur Plex passée en config
         plex_client = PlexClient(options.get('plex_token'), options.get('plex_server_url'))
         
         my_profile = plex_client.get_my_profile()
@@ -66,36 +65,44 @@ def run_sync():
             stats["total_plex"] += user_total
             
             for item in watchlist:
+                m_type = item.get('type')
                 tmdb_id = item.get('tmdb_id')
 
-                # --- NOUVEAUTÉ : RECHERCHE CROISÉE SUR LE SERVEUR ---
-                # Si l'ID TMDB n'est pas dans la watchlist (cas fréquent des amis),
-                # on demande à notre propre serveur s'il connaît le contenu.
-                if not tmdb_id:
-                    tmdb_id = plex_client.find_tmdb_id_on_server(item['title'], item['year'])
-                    if tmdb_id:
-                        logger.info(f"ID TMDB {tmdb_id} récupéré sur le serveur pour : {item['title']}")
+                # --- RECHERCHE SUR TON SERVEUR (Source de vérité) ---
+                # On cherche l'ID sur ton serveur avec le titre, l'année ET le type.
+                # Cela corrige les erreurs d'identification pour les amis.
+                server_found_id = plex_client.find_tmdb_id_on_server(item['title'], item['year'], m_type)
+                
+                # Priorité : ID trouvé sur le serveur > ID de la watchlist
+                final_tmdb_id = server_found_id or tmdb_id
 
                 # --- VÉRIFICATION OVERSEERR ---
-                if tmdb_id:
-                    # Si on a un ID, on demande le statut direct (zéro erreur de matching)
-                    match = ov_client.get_media_status(tmdb_id, item['type'])
+                if final_tmdb_id:
+                    match = ov_client.get_media_status(final_tmdb_id, m_type)
                 else:
-                    # Sinon, on tente la recherche textuelle classique
-                    match = ov_client.search_content(item['title'], item['year'], item['type'])
+                    match = ov_client.search_content(item['title'], item['year'], m_type)
                 
-                if match['status'] == "Déjà présent sur Plex":
+                # --- LOGIQUE DE STATUT FINALE ---
+                current_status = match['status']
+                can_request = match.get('can_request', False)
+
+                # Sécurité : Si ton serveur connaît l'ID, c'est qu'il est déjà là.
+                if server_found_id:
+                    current_status = "Déjà présent sur Plex"
+                    can_request = False
+
+                if current_status == "Déjà présent sur Plex":
                     stats["already_on_plex"] += 1
-                elif match.get('can_request'):
+                elif can_request:
                     stats["to_overseerr"] += 1
 
                 items_with_status.append({
                     "title": item['title'],
                     "year": item['year'],
-                    "type": item['type'],
-                    "overseerr_status": match['status'],
-                    "tmdb_id": tmdb_id or match.get('tmdb_id'),
-                    "can_request": match.get('can_request', False)
+                    "type": m_type,
+                    "overseerr_status": current_status,
+                    "tmdb_id": final_tmdb_id or match.get('tmdb_id'),
+                    "can_request": can_request
                 })
             
             full_report.append({
