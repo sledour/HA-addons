@@ -22,6 +22,23 @@ print("-------------------------------------------------------")
 
 app = FastAPI()
 
+@app.on_event("startup")
+def startup_event():
+    logger.info("Vérification de la connexion Overseerr au démarrage...")
+    options = get_hass_options()
+    url = options.get('overseerr_url')
+    api_key = options.get('overseerr_api_key')
+    
+    if url and api_key:
+        client = OverseerrClient(url, api_key)
+        result = client.get_status()
+        if result["connected"]:
+            logger.info(f"VÉRIFICATION : Connecté à Overseerr (v{result['details'].get('version')})")
+        else:
+            logger.error(f"VÉRIFICATION : Échec connexion Overseerr : {result.get('error')}")
+    else:
+        logger.warning("VÉRIFICATION : Paramètres Overseerr manquants dans la config HASS")
+
 def get_hass_options():
     options_path = "/data/options.json"
     if os.path.exists(options_path):
