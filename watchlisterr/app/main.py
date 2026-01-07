@@ -60,44 +60,59 @@ def get_hass_options():
 
 @app.get("/")
 def read_root():
-    options = get_hass_options()
-    
-    # Récupération Overseerr
-    ov_client = OverseerrClient(options.get('overseerr_url'), options.get('overseerr_api_key'))
-    ov_status = ov_client.get_status()
-    ov_users = ov_client.get_users() if ov_status["connected"] else []
-
-    # Récupération Plex
-    plex_token = options.get('plex_token')
-    plex_all_identities = [] # On va regrouper toi + tes amis
-    plex_connected = False
-    
-    if plex_token:
-        plex_client = PlexClient(plex_token)
+    try:
+        options = get_hass_options()
         
-        # 1. Récupérer MON profil (le compte admin)
-    my_profile = plex_client.get_my_profile()
-    if my_profile:
-        plex_all_identities.append(my_profile)
-        logger.info(f"Profil admin trouvé : {my_profile['username']} ({my_profile['plex_id']})")
-    
-    # 2. Récupérer les AMIS
-    friends_data = plex_client.get_friends()
-    if friends_data:
-        plex_all_identities.extend(friends_data)
+        # --- Overseerr ---
+        ov_client = OverseerrClient(options.get('overseerr_url'), options.get('overseerr_api_key'))
+        ov_status = ov_client.get_status()
+        ov_users = ov_client.get_users() if ov_status.get("connected") else []
 
-    # 3. Matching amélioré
-    matching_table = []
-    for ov_user in ov_users:
-        # On compare les pseudos sans tenir compte de la casse
-        match = next((p for p in plex_all_identities if str(p['username']).lower() == str(ov_user['name']).lower()), None)
+        # --- Plex ---
+        plex_token = options.get('plex_token')
+        plex_all_identities = []
+        plex_connected = False
+        test_watchlist = []
         
-        matching_table.append({
-            "name": ov_user['name'],
-            "overseerr_id": ov_user['id'],
-            "plex_uuid": match['plex_id'] if match else "NON TROUVÉ",
-            "status": "Match OK" if match else "Utilisateur non trouvé sur Plex"
-        })
+        if plex_token:
+            plex_client = PlexClient(plex_token)
+            
+            # 1. Ton Profil
+            my_profile = plex_client.get_my_profile()
+            if my_profile:
+                plex_all_identities.append(my_profile)
+                plex_connected = True
+                logger.info(f"Profil admin trouvé : {my_profile['username']} ({my_profile['plex_id']})")
+                
+                # TEST : On récupère TA propre watchlist
+                test_watchlist = plex_client.get_watchlist(my_profile['plex_id'])
+            
+            # 2. Tes Amis
+            friends_data = plex_client.get_friends()
+            if friends_data:
+                plex_all_identities.extend(friends_data)
+
+        # --- Matching ---
+        matching_table = []
+        for ov_user in ov_users:
+            match = next((p for p in plex_all_identities if str(p['username']).lower() == str(ov_user['name']).lower()), None)
+            matching_table.append({
+                "name": ov_user['name'],
+                "overseerr_id": ov_user['id'],
+                "plex_uuid": match['plex_id'] if match else "NON TROUVÉ",
+                "status": "Match OK" if match else "Non trouvé sur Plex"
+            })
+
+        return {
+            "status": "Watchlisterr is running",
+            "connections": {"overseerr": ov_status.get("connected"), "plex": plex_connected},
+            "my_watchlist_preview": test_watchlist[:5], # On affiche les 5 premiers pour tester
+            "sync_mapping": matching_table
+        }
+
+    except Exception as e:
+        logger.error(f"Erreur Ingress : {e}")
+        return {"error": str(e)}
 
 @app.get("/check-overseerr")
 def check_overseerr():
