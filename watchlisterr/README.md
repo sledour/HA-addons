@@ -46,6 +46,9 @@ Une fois l'add-on lancé, les données sont accessibles via Ingress
 ## 📌 À Faire (Roadmap)
 - [x] Mapper les utilisateurs Plex avec les IDs utilisateurs Overseerr.
 - [x] Création d'une base de donnée poursauvegarder le cache (mapping des users et média à envoyer vers Overseerr)
-- [ ] Ajout d'un scan_interval pour les watchlists et users
-- [ ] Créer une interface Web visuelle (Posters de films demandés a Overseerr).
+- [x] Ajout d'un scan_interval pour les watchlists et users
+- [x] Créer une interface Web visuelle (Posters de films demandés a Overseerr).
+- [ ] Si dry_run off, pas d'affcihage dans l'UI
+- [ ] Afficher poster
+- [ ] Stabiliser page web
 - [ ] Activer l'envoi automatique des requêtes (Mode Production).
