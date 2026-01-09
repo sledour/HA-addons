@@ -1,4 +1,4 @@
-# 0.2.0 - Stable with DB
+# 0.3.0 - Stable with DB
 import sqlite3
 import logging
 
@@ -37,7 +37,6 @@ class Database:
         except Exception as e:
             logger.error(f"❌ Erreur initialisation SQLite: {e}")
 
-    # --- Gestion Users ---
     def save_user(self, plex_uuid, username, overseerr_id, role):
         with self._get_connection() as conn:
             conn.execute('''
@@ -45,14 +44,14 @@ class Database:
                 VALUES (?, ?, ?, ?)
             ''', (plex_uuid, username, overseerr_id, role))
 
-    def get_overseerr_id(self, plex_uuid):
+    def get_overseerr_id_by_name(self, username):
+        """Récupère l'ID Overseerr via le nom d'utilisateur (pour le scan réactif)"""
         with self._get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT overseerr_id FROM users WHERE plex_uuid = ?", (plex_uuid,))
+            cursor.execute("SELECT overseerr_id FROM users WHERE username = ?", (username,))
             res = cursor.fetchone()
             return res[0] if res else None
 
-    # --- Gestion Cache Media ---
     def get_cached_media(self, title, year):
         with self._get_connection() as conn:
             conn.row_factory = sqlite3.Row

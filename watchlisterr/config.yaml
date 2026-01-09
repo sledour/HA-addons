@@ -27,4 +27,4 @@ schema:
   overseerr_url: str
   overseerr_api_key: password
   tmdb_api_key: password
-  sync_interval: int(10,1440)
+  sync_interval: int(3,1440)

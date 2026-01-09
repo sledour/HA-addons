@@ -1,4 +1,4 @@
-# 0.2.0 - Stable with DB
+# 0.3.0 - Reactive Loop + Submit Request
 import requests
 import logging
 
@@ -9,13 +9,30 @@ class OverseerrClient:
         self.base_url = base_url.rstrip('/')
         self.headers = {"X-Api-Key": api_key}
 
+    def submit_request(self, tmdb_id, media_type, user_id, title):
+        """Soumet une requête à Overseerr (MODE SIMULATION FORCE)"""
+        # Sécurité pour ton test : Toujours True pour le moment
+        is_simulation = True 
+        
+        if is_simulation:
+            logger.info(f"🧪 [SIMULATION] Requête pour '{title}' (TMDB:{tmdb_id}) | User ID:{user_id} | Statut : 10Gbps prêt")
+            return True
+
+        # Le code réel reste désactivé pour l'instant
+        url = f"{self.base_url}/api/v1/request"
+        payload = {"mediaType": media_type, "mediaId": int(tmdb_id), "userId": int(user_id)}
+        try:
+            r = requests.post(url, json=payload, headers=self.headers, timeout=10)
+            return r.status_code == 201
+        except Exception as e:
+            logger.error(f"Erreur soumission Overseerr: {e}")
+            return False
+
     def get_users(self):
         url = f"{self.base_url}/api/v1/user"
         try:
             r = requests.get(url, headers=self.headers, timeout=10)
             if r.status_code == 200:
-                # IMPORTANT: Overseerr renvoie {"results": [...], "pageInfo": ...}
-                # On doit extraire la liste qui est dans 'results'
                 data = r.json()
                 return data.get('results', []) 
             else:
@@ -26,10 +43,7 @@ class OverseerrClient:
             return []
     
     def get_media_status(self, tmdb_id, media_type):
-        """Vérifie le statut par ID TMDB (recommandé)"""
-        # Overseerr attend 'tv' et non 'show'
         m_type = "tv" if media_type in ["show", "tv"] else "movie"
-        
         url = f"{self.base_url}/api/v1/{m_type}/{tmdb_id}"
         try:
             response = requests.get(url, headers=self.headers, timeout=10)
@@ -37,9 +51,6 @@ class OverseerrClient:
                 data = response.json()
                 media = data.get('mediaInfo', {})
                 status = media.get('status', 1)
-                
-                # Mappage officiel Overseerr
-                # 1: Unknown, 2: Pending, 3: Processing, 4: Partially Available, 5: Available
                 status_map = {
                     1: "Non demandé", 
                     2: "En attente", 
@@ -47,7 +58,6 @@ class OverseerrClient:
                     4: "Partiellement disponible", 
                     5: "Déjà présent sur Plex"
                 }
-                
                 return {
                     "status": status_map.get(status, "Inconnu"),
                     "can_request": status == 1,
@@ -59,7 +69,6 @@ class OverseerrClient:
             return {"status": "Erreur API", "can_request": False, "tmdb_id": tmdb_id}
 
     def search_content(self, title, year, media_type):
-        """Fallback recherche textuelle si le TMDB ID est absent"""
         url = f"{self.base_url}/api/v1/search"
         params = {"query": title}
         try:
@@ -67,12 +76,10 @@ class OverseerrClient:
             if response.status_code == 200:
                 results = response.json().get('results', [])
                 for res in results:
-                    # On compare le type (converti en 'movie' ou 'tv')
                     target_type = "tv" if media_type in ["show", "tv"] else "movie"
                     if res.get('mediaType') == target_type:
                         res_date = res.get('releaseDate', res.get('firstAirDate', ''))
                         res_year = res_date[:4] if res_date else ""
-                        
                         if not year or res_year == str(year):
                             return self.get_media_status(res.get('id'), target_type)
             return {"status": "Introuvable", "can_request": True, "tmdb_id": None}

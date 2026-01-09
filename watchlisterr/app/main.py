@@ -1,4 +1,4 @@
-# 0.2.0 - Stable with DB
+# 0.3.0 - Reactive Loop + Cycle 1/100
 import sys, logging, json, os, time, requests, sqlite3
 from threading import Thread
 from fastapi import FastAPI
@@ -21,22 +21,62 @@ CACHE = {
     "api_status": {"plex": "Attente...", "overseerr": "Attente...", "tmdb": "Attente..."}
 }
 IS_SCANNING = False
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # Ce qui se passe au démarrage
-    Thread(target=run_sync).start()
-    yield
-    # Ce qui se passe à l'arrêt (si besoin)
-
-app = FastAPI(lifespan=lifespan)
-db = Database()
+CYCLE_COUNT = 0
 
 def get_hass_options():
     options_path = "/data/options.json"
     if os.path.exists(options_path):
         with open(options_path, 'r') as f: return json.load(f)
     return {}
+
+def run_sync_loop():
+    """Boucle principale réactive"""
+    global CYCLE_COUNT
+    logger.info("🚀 Démarrage de la boucle réactive (Interval: config.yaml)")
+    
+    while True:
+        try:
+            opts = get_hass_options()
+            interval = opts.get("sync_interval", 3) # En minutes
+            
+            # 1. Sync Users tous les 100 cycles (ou au cycle 0)
+            include_users = (CYCLE_COUNT % 100 == 0)
+            
+            # 2. Exécution du scan
+            run_sync(sync_users=include_users)
+            
+            # 3. Traitement des requêtes (Simulation)
+            if "plex_watchlists" in CACHE:
+                ov_client = OverseerrClient(opts.get('overseerr_url'), opts.get('overseerr_api_key'))
+                for wl in CACHE["plex_watchlists"]:
+                    ov_user_id = db.get_overseerr_id_by_name(wl["name"])
+                    if not ov_user_id: continue
+                    
+                    for item in wl.get("items", []):
+                        if item.get("can_request") is True:
+                            ov_client.submit_request(
+                                tmdb_id=item["tmdb_id"],
+                                media_type=item["type"],
+                                user_id=ov_user_id,
+                                title=item["title"]
+                            )
+
+            CYCLE_COUNT += 1
+            logger.info(f"💤 Cycle {CYCLE_COUNT} terminé. Prochain scan dans {interval} min.")
+            time.sleep(interval * 60)
+            
+        except Exception as e:
+            logger.error(f"💥 Erreur boucle : {e}")
+            time.sleep(60)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Lancement de la boucle dans un thread séparé
+    Thread(target=run_sync_loop, daemon=True).start()
+    yield
+
+app = FastAPI(lifespan=lifespan)
+db = Database()
 
 def check_apis(opts):
     """Vérifie l'état des connexions Plex, Overseerr et TMDB"""
@@ -45,60 +85,43 @@ def check_apis(opts):
     try:
         p = PlexClient(opts.get('plex_token'), opts.get('plex_server_url'))
         profile = p.get_my_profile()
-        if profile:
-            checks["plex"] = f"✅ Connecté ({profile['username']})"
-            logger.info(f"[CHECK] Plex: OK (User: {profile['username']})")
-    except Exception as e:
-        checks["plex"] = f"❌ Erreur: {str(e)}"
+        if profile: checks["plex"] = f"✅ Connecté ({profile['username']})"
+    except Exception: pass
 
     try:
         url = f"{opts.get('overseerr_url').rstrip('/')}/api/v1/status"
         headers = {"X-Api-Key": opts.get('overseerr_api_key')}
         r = requests.get(url, headers=headers, timeout=5)
-        if r.status_code == 200:
-            checks["overseerr"] = "✅ Connecté"
-            logger.info("[CHECK] Overseerr: OK")
-    except Exception as e:
-        checks["overseerr"] = f"❌ Erreur: {str(e)}"
+        if r.status_code == 200: checks["overseerr"] = "✅ Connecté"
+    except Exception: pass
 
     try:
         tmdb_key = opts.get('tmdb_api_key')
         r = requests.get(f"https://api.themoviedb.org/3/authentication/token/new?api_key={tmdb_key}", timeout=5)
-        if r.status_code in [200, 401]:
-            if r.status_code == 200:
-                checks["tmdb"] = "✅ Connecté"
-                logger.info("[CHECK] TMDB: OK")
-            else:
-                checks["tmdb"] = "❌ Clé API Invalide"
-    except Exception as e:
-        checks["tmdb"] = f"❌ Erreur: {str(e)}"
-    
+        if r.status_code == 200: checks["tmdb"] = "✅ Connecté"
+    except Exception: pass
     return checks
 
 def sync_users_mapping(plex_client, ov_client):
     """Mapping Plex <> Overseerr basé sur le nom d'utilisateur identique"""
     try:
-        logger.info("Synchronisation des mappings utilisateurs...")
+        logger.info("👥 Synchronisation des mappings utilisateurs...")
         plex_users = []
         admin = plex_client.get_my_profile()
         if admin: plex_users.append({**admin, "role": "Admin"})
-        
         friends = plex_client.get_friends() or []
         for f in friends: plex_users.append({**f, "role": "Friend"})
         
         ov_users = ov_client.get_users()
-        
         for p_user in plex_users:
             match = next((u for u in ov_users if u['displayName'].lower() == p_user['username'].lower()), None)
             if match:
                 db.save_user(p_user['plex_id'], p_user['username'], match['id'], p_user['role'])
-                logger.info(f"✅ Mapping : {p_user['username']} -> Overseerr ID {match['id']}")
-            else:
-                logger.warning(f"⚠️ Aucun compte Overseerr pour {p_user['username']}")
+                logger.info(f"✅ Mapping DB : {p_user['username']} -> ID {match['id']}")
     except Exception as e:
         logger.error(f"Erreur sync_users : {e}")
 
-def run_sync():
+def run_sync(sync_users=False):
     global CACHE, IS_SCANNING
     if IS_SCANNING: return
     IS_SCANNING = True
@@ -110,7 +133,8 @@ def run_sync():
         plex_client = PlexClient(opts.get('plex_token'), opts.get('plex_server_url'))
         tmdb_client = TMDBClient(opts.get('tmdb_api_key'))
         
-        sync_users_mapping(plex_client, ov_client)
+        if sync_users:
+            sync_users_mapping(plex_client, ov_client)
         
         logger.info("Début du scan complet...")
         my_profile = plex_client.get_my_profile()
@@ -126,7 +150,6 @@ def run_sync():
         for user in users_to_process:
             watchlist = plex_client.get_watchlist(user['plex_id'])
             items_with_status = []
-            
             for item in watchlist:
                 title, year, m_type = item['title'], item['year'], item['type']
                 tmdb_id = item.get('tmdb_id')
@@ -143,11 +166,7 @@ def run_sync():
                             logger.info(f"🆕 TMDB mis en cache : {title} ({tmdb_id})")
 
                 server_id = plex_client.find_tmdb_id_on_server(title, year, m_type)
-                
-                if tmdb_id:
-                    match = ov_client.get_media_status(tmdb_id, m_type)
-                else:
-                    match = ov_client.search_content(title, year, m_type)
+                match = ov_client.get_media_status(tmdb_id, m_type) if tmdb_id else ov_client.search_content(title, year, m_type)
                 
                 status = "Déjà présent sur Plex" if server_id else match['status']
                 can_req = False if server_id else match.get('can_request', False)
@@ -159,25 +178,10 @@ def run_sync():
                     "title": title, "year": year, "type": m_type,
                     "overseerr_status": status, "tmdb_id": tmdb_id, "can_request": can_req
                 })
-            
-            full_report.append({"name": user['username'], "type": user['role'], "watchlist_count": len(watchlist), "items": items_with_status})
+            full_report.append({"name": user['username'], "watchlist_count": len(watchlist), "items": items_with_status})
 
         stats["total_plex"] = sum(u["watchlist_count"] for u in full_report)
-        CACHE = {"status": "Données à jour", "last_update": time.strftime("%Y-%m-%d %H:%M:%S"), "stats": stats, "plex_watchlists": full_report, "api_status": api_results}
-        logger.info(f"Scan terminé : {stats['total_plex']} items traités.")
-
-        # --- AJOUT : RAPPORT DE BASE DE DONNÉES ---
-        with db._get_connection() as conn:
-            user_count = conn.execute("SELECT count(*) FROM users").fetchone()[0]
-            cache_count = conn.execute("SELECT count(*) FROM media_cache").fetchone()[0]
-            logger.info(f"📊 [DATABASE] État de la base : {user_count} utilisateurs mappés, {cache_count} médias en cache.")
-            
-            # Optionnel : Lister les noms des users en DB pour confirmer
-            users = conn.execute("SELECT username FROM users").fetchall()
-            user_list = ", ".join([u[0] for u in users])
-            logger.info(f"👥 [DATABASE] Utilisateurs en base : {user_list}")
-        # ------------------------------------------
-
+        CACHE = {"status": "Données à jour", "last_update": time.strftime("%Y-%m-%d %H:%M:%S"), "stats": stats, "plex_watchlists": full_report, "api_status": check_apis(opts)}
     except Exception as e:
         logger.error(f"Erreur scan : {e}")
         CACHE["status"] = f"Erreur : {str(e)}"
@@ -190,8 +194,8 @@ def read_root(): return {"scan_in_progress": IS_SCANNING, "results": CACHE}
 @app.get("/sync")
 def force_sync():
     if not IS_SCANNING:
-        Thread(target=run_sync).start()
-        return {"message": "Scan lancé"}
+        Thread(target=run_sync, kwargs={"sync_users": True}).start()
+        return {"message": "Scan forcé lancé (avec users)"}
     return {"message": "Déjà en cours"}
 
 @app.get("/debug/users")
