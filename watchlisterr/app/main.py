@@ -195,6 +195,19 @@ def run_sync(sync_users=False):
         logger.error(f"❌ Erreur pendant run_sync: {e}")
     finally:
         IS_SCANNING = False
+    
+def get_version():
+    try:
+        # Si tu as copié le config.yaml dans le conteneur via le Dockerfile
+        with open("/app/config.yaml", 'r') as f:
+            for line in f:
+                if line.startswith("version:"):
+                    return line.split(":")[1].strip().replace('"', '').replace("'", "")
+    except:
+        pass
+    return "0.3.5" # Fallback
+
+VERSION = get_version()
 
 # --- ROUTES FASTAPI ---
 
@@ -218,12 +231,14 @@ async def read_dashboard(request: Request):
 
     return templates.TemplateResponse("index.html", {
         "request": request,
+        "version": VERSION,
         "items_to_request": all_items,
         "logs": list(LOG_HISTORY),
         "cycle": CYCLE_COUNT,
         "dry_run": opts.get("dry_run", True),
         "is_scanning": IS_SCANNING,
-        "stats": {"to_overseerr": len(all_items)}
+        "stats": {"to_overseerr": len(all_items)},
+        "api_status": CACHE["api_status"]
     })
 
 @app.get("/sync")

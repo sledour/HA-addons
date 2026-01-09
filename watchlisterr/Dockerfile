@@ -20,6 +20,7 @@ RUN pip3 install --no-cache-dir --break-system-packages \
 
 # Copie de tout le dossier app (incluant templates/ et images)
 COPY app/ /app/
+COPY config.yaml /app/config.yaml
 
 # Exécution
 CMD ["python3", "/app/main.py"]
