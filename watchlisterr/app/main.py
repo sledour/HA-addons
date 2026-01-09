@@ -240,6 +240,7 @@ async def read_dashboard(request: Request):
         for item in wl.get("items", []):
             item_copy = item.copy()
             item_copy["requested_by"] = wl["name"]
+            item_copy["poster_path"] = item.get("poster_path")
             all_items.append(item_copy)
 
     return templates.TemplateResponse("index.html", {
@@ -260,6 +261,19 @@ async def force_sync():
         Thread(target=run_sync, kwargs={"sync_users": True}).start()
         return {"status": "started"}
     return {"status": "already_running"}
+
+@app.get("/proxy-image")
+async def proxy_image(url: str):
+    import requests
+    from fastapi import Response
+    try:
+        # On ajoute un User-Agent pour ne pas être bloqué par TMDB
+        headers = {"User-Agent": "Watchlisterr/1.0"}
+        r = requests.get(url, headers=headers, timeout=10)
+        return Response(content=r.content, media_type=r.headers.get('Content-Type', 'image/jpeg'))
+    except Exception as e:
+        logger.error(f"Erreur proxy image : {e}")
+        return Response(status_code=404)
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=1604)

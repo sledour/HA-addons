@@ -1,6 +1,6 @@
 name: "Watchlisterr"
 description: "Synchronisation des watchlists Plex vers Overseerr"
-version: "0.3.18"
+version: "0.3.19"
 slug: "watchlisterr"
 arch:
 - aarch64
