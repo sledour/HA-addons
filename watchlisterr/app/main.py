@@ -265,16 +265,17 @@ async def force_sync():
 
 # ROUTE PROXY POUR LES IMAGES (FIX HA INGRESS)
 @app.get("/proxy-image")
-async def proxy_image(url: str):
+async def proxy_image(request: Request):
     import requests
-    from fastapi import Response
+    url = request.query_params.get("url")
+    if not url:
+        return Response(status_code=400)
     try:
-        # On ajoute un User-Agent pour ne pas être bloqué par TMDB
-        headers = {"User-Agent": "Watchlisterr/1.0"}
-        r = requests.get(url, headers=headers, timeout=10)
-        return Response(content=r.content, media_type=r.headers.get('Content-Type', 'image/jpeg'))
+        # Utilisation de la session pour plus de rapidité
+        r = requests.get(url, headers={"User-Agent": "Watchlisterr/1.0"}, timeout=5)
+        return Response(content=r.content, media_type="image/jpeg")
     except Exception as e:
-        logger.error(f"Erreur proxy image : {e}")
+        logger.error(f"Erreur proxy direct : {e}")
         return Response(status_code=404)
 
 if __name__ == "__main__":
