@@ -1,6 +1,7 @@
 # 0.3.0 - Stable with DB
 import sqlite3
 import logging
+from datetime import datetime
 
 logger = logging.getLogger("watchlisterr")
 
@@ -69,12 +70,13 @@ class Database:
             res = cursor.fetchone()
             return dict(res) if res else None
 
-    def save_media(self, tmdb_id, title, media_type, year):
-        with self._get_connection() as conn:
-            conn.execute('''
-                INSERT OR IGNORE INTO media_cache (tmdb_id, title, media_type, year)
-                VALUES (?, ?, ?, ?)
-            ''', (tmdb_id, title, media_type, year))
+    def save_media(self, tmdb_id, title, media_type, year, poster_path):
+        query = """
+            INSERT OR REPLACE INTO media (tmdb_id, title, media_type, year, poster_path, last_updated)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """
+        self.cursor.execute(query, (tmdb_id, title, media_type, year, poster_path, datetime.now()))
+        self.conn.commit()
 
     def setup_db(self):
         # Ajoute poster_path à ta structure de table
