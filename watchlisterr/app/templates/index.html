@@ -81,16 +81,19 @@
     <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
         {% for item in items_to_request %}
         <div class="relative group aspect-[2/3] rounded-xl overflow-hidden border border-gray-800 transition-all hover:border-purple-500 hover:scale-105 shadow-2xl bg-gray-900">
-                {% if item.poster_path %}
+                {% if item.poster_path and item.poster_path != 'None' %}
                 <img src="proxy-image?url=https://image.tmdb.org/t/p/w500{{ item.poster_path }}" 
-                     alt="{{ item.title }}" 
-                     referrerpolicy="no-referrer"
-                     class="w-full h-full object-cover group-hover:opacity-60 transition-opacity"
-                     onerror="console.error('Erreur chargement proxy pour: ' + this.src)">
+                    alt="{{ item.title }}" 
+                    referrerpolicy="no-referrer"
+                    class="w-full h-full object-cover group-hover:opacity-60 transition-opacity"
+                    onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                <div class="hidden w-full h-full flex-col items-center justify-center p-4 text-center bg-gray-800">
+                    <span class="text-[10px] text-gray-500 uppercase font-bold">{{ item.title }}</span>
+                </div>
                 {% else %}
-                    <div class="w-full h-full flex flex-col items-center justify-center p-4 text-center bg-gray-800">
-                        <span class="text-[10px] text-gray-500 uppercase font-bold">{{ item.title }}</span>
-                    </div>
+                <div class="w-full h-full flex flex-col items-center justify-center p-4 text-center bg-gray-800">
+                    <span class="text-[10px] text-gray-500 uppercase font-bold">{{ item.title }}</span>
+                </div>
                 {% endif %}
 
             <div class="absolute inset-0 poster-gradient pointer-events-none"></div>

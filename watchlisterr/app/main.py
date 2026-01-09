@@ -265,17 +265,15 @@ async def force_sync():
 
 # ROUTE PROXY POUR LES IMAGES (FIX HA INGRESS)
 @app.get("/proxy-image")
-async def proxy_image(request: Request):
-    import requests
-    url = request.query_params.get("url")
-    if not url:
+async def proxy_image(url: str = None):
+    if not url or url == "None":
         return Response(status_code=400)
     try:
-        # Utilisation de la session pour plus de rapidité
+        # On force un timeout court pour ne pas bloquer l'UI
         r = requests.get(url, headers={"User-Agent": "Watchlisterr/1.0"}, timeout=5)
         return Response(content=r.content, media_type="image/jpeg")
     except Exception as e:
-        logger.error(f"Erreur proxy direct : {e}")
+        logger.error(f"❌ Erreur Proxy: {e}")
         return Response(status_code=404)
 
 if __name__ == "__main__":
