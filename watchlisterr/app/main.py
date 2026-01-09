@@ -175,23 +175,19 @@ def run_sync(sync_users=False):
                     tmdb_id = cached['tmdb_id']
                     m_type = cached['media_type']
                     poster = cached['poster_path']
-                    logger.info(f"DEBUG DB | Titre: {item['title']} | TMDB ID: {cached.get('tmdb_id')} | Poster: {cached.get('poster_path')}")
+                    logger.info(f"DEBUG DB | {item['title']} chargé depuis cache")
                 else:
-                    # Cas : Nouveau média OU média connu mais sans poster
-                    logger.info(f"DEBUG DB | {item['title']} n'est pas encore en base")
+                    logger.info(f"🔎 Recherche TMDB pour : {item['title']}")
                     tmdb_res = tmdb_client.search_multi(item['title'], item['year'])
                     
                     if tmdb_res:
+                        # ICI : On assigne les variables pour qu'elles soient utilisées immédiatement
                         tmdb_id = tmdb_res['tmdb_id']
                         m_type = tmdb_res['type']
                         poster = tmdb_res.get('poster_path')
                         
-                        # On met à jour ou on insère (le REPLACE INTO de la DB s'en occupe)
                         db.save_media(tmdb_id, item['title'], m_type, item['year'], poster)
-                        if not cached:
-                            logger.info(f"🆕 Nouveau média mis en cache : {item['title']}")
-                        else:
-                            logger.info(f"♻️ Poster récupéré pour média existant : {item['title']}")
+                        logger.info(f"✅ Mis en cache : {item['title']} (Poster: {poster})")
                 
                 match = ov_client.get_media_status(tmdb_id, m_type) if tmdb_id else {'status': 'Inconnu', 'can_request': False}
                 

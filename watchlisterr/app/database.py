@@ -76,12 +76,14 @@ class Database:
             return dict(res) if res else None
 
     def save_media(self, tmdb_id, title, media_type, year, poster_path):
-        query = """
-            INSERT OR REPLACE INTO media (tmdb_id, title, media_type, year, poster_path, last_updated)
-            VALUES (?, ?, ?, ?, ?, ?)
-        """
-        self.cursor.execute(query, (tmdb_id, title, media_type, year, poster_path, datetime.now()))
-        self.conn.commit()
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT OR REPLACE INTO media (tmdb_id, title, media_type, year, poster_path)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (tmdb_id, title, media_type, year, poster_path))
+        conn.commit() # <--- TRÈS IMPORTANT
+        conn.close()
 
     def setup_db(self):
         # Ajoute poster_path à ta structure de table
