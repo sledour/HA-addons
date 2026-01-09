@@ -1,6 +1,10 @@
 name: "Watchlisterr"
 description: "Synchronisation des watchlists Plex vers Overseerr"
+<<<<<<< HEAD:config.yaml
 version: "0.0.26"
+=======
+version: "0.0.30"
+>>>>>>> 1e141cec7ee0c34f7f3379e00e771cc2a6042038:watchlisterr/config.yaml
 slug: "watchlisterr"
 arch:
 - aarch64
@@ -14,7 +18,7 @@ panel_title: "Watchlisterr"
 startup: services
 options:
   log_level: info
-  plex_url: "https://plex.tv"
+  plex_url: "http://192.168.x.x:32400"
   plex_token: ""
   overseerr_url: "http://192.168.x.x:5055"
   overseerr_api_key: ""
