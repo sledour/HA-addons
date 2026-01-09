@@ -178,7 +178,11 @@ def run_sync(sync_users=False):
                     logger.info(f"DEBUG DB | {item['title']} chargé depuis cache")
                 else:
                     logger.info(f"🔎 Recherche TMDB pour : {item['title']}")
-                    tmdb_res = tmdb_client.search_multi(item['title'], item['year'])
+                    tmdb_res = tmdb_client.search_multi(
+                        title=item['title'], 
+                        year=item['year'], 
+                        target_id=item.get('tmdb_id') # Passe l'ID ici si tu l'as
+                    )
                     
                     if tmdb_res:
                         # ICI : On assigne les variables pour qu'elles soient utilisées immédiatement
