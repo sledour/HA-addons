@@ -1,6 +1,6 @@
 name: "Watchlisterr"
 description: "Synchronisation des watchlists Plex vers Overseerr"
-version: "0.2.0"
+version: "0.2.1"
 slug: "watchlisterr"
 arch:
 - aarch64
@@ -20,6 +20,7 @@ options:
   overseerr_api_key: ""
   tmdb_api_key: ""
   sync_interval: 60
+  dry_run: true
 schema:
   log_level: list(debug|info|warning|error|fatal)?
   plex_url: str
@@ -28,3 +29,4 @@ schema:
   overseerr_api_key: password
   tmdb_api_key: password
   sync_interval: int(3,1440)
+  dry_run: bool

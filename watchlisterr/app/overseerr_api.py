@@ -9,25 +9,28 @@ class OverseerrClient:
         self.base_url = base_url.rstrip('/')
         self.headers = {"X-Api-Key": api_key}
 
-    def submit_request(self, tmdb_id, media_type, user_id, title):
-        """Soumet une requête à Overseerr (MODE SIMULATION FORCE)"""
-        # Sécurité pour ton test : Toujours True pour le moment
-        is_simulation = True 
+    def submit_request(self, tmdb_id, media_type, user_id, title, is_simulation=True):
+        """Soumet une requête à Overseerr (Piloté par l'option HA)"""
         
         if is_simulation:
-            logger.info(f"🧪 [SIMULATION] Requête pour '{title}' (TMDB:{tmdb_id}) | User ID:{user_id} | Statut : 10Gbps prêt")
+            logger.info(f"🧪 [SIMULATION] Requête pour '{title}' (ID:{tmdb_id}) | User ID:{user_id}")
             return True
 
-        # Le code réel reste désactivé pour l'instant
+        # Mode PRODUCTION (Actif si is_simulation est False)
         url = f"{self.base_url}/api/v1/request"
         payload = {"mediaType": media_type, "mediaId": int(tmdb_id), "userId": int(user_id)}
         try:
             r = requests.post(url, json=payload, headers=self.headers, timeout=10)
-            return r.status_code == 201
+            if r.status_code == 201:
+                logger.info(f"🚀 [LIVE] Requête RÉUSSIE pour '{title}'")
+                return True
+            else:
+                logger.error(f"❌ [LIVE] Échec Overseerr ({r.status_code}): {r.text}")
+                return False
         except Exception as e:
-            logger.error(f"Erreur soumission Overseerr: {e}")
+            logger.error(f"❌ [LIVE] Erreur connexion : {e}")
             return False
-
+        
     def get_users(self):
         url = f"{self.base_url}/api/v1/user"
         try:
