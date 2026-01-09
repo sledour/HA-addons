@@ -47,11 +47,9 @@
     </div>
 
     <div class="flex items-center gap-6">
-        <div title="Mode Simulation : Les requêtes ne sont pas envoyées à Overseerr. Pour changer cela, allez dans l'onglet 'Configuration' de l'Add-on."
+        <div title="Mode Simulation : Les requêtes ne sont pas envoyées à Overseerr."
             class="flex items-center gap-3 bg-gray-800/30 px-4 py-2 rounded-xl border border-gray-800 cursor-help transition-all">
-            
             <span class="text-xs font-bold uppercase tracking-wider text-gray-500">Dry Run</span>
-            
             <div class="flex items-center gap-2">
                 {% if dry_run %}
                     <span class="flex h-2 w-2 rounded-full bg-indigo-500 shadow-[0_0_8px_#6366f1]"></span>
@@ -83,35 +81,34 @@
     <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
         {% for item in items_to_request %}
         <div class="relative group aspect-[2/3] rounded-xl overflow-hidden border border-gray-800 transition-all hover:border-purple-500 hover:scale-105 shadow-2xl bg-gray-900">
-            
                 {% if item.poster_path %}
-                    <img src="proxy-image?url=https://image.tmdb.org/t/p/w500{{ item.poster_path }}" 
-                        alt="{{ item.title }}" 
-                        referrerpolicy="no-referrer"
-                        class="w-full h-full object-cover group-hover:opacity-60 transition-opacity">
+                <img src="./proxy-image?url=https://image.tmdb.org/t/p/w500{{ item.poster_path }}" 
+                    alt="{{ item.title }}" 
+                    referrerpolicy="no-referrer"
+                    onerror="this.parentElement.innerHTML='<div class=\'w-full h-full flex flex-col items-center justify-center p-4 bg-gray-800\'><span class=\'text-[10px] text-gray-500 uppercase font-bold\'>{{ item.title }}</span></div>'"
+                    class="w-full h-full object-cover group-hover:opacity-60 transition-opacity">
                 {% else %}
                     <div class="w-full h-full flex flex-col items-center justify-center p-4 text-center bg-gray-800">
-                        <svg class="w-12 h-12 text-gray-700 mb-2" ...></svg>
                         <span class="text-[10px] text-gray-500 uppercase font-bold">{{ item.title }}</span>
                     </div>
                 {% endif %}
 
-            <div class="absolute inset-0 poster-gradient"></div>
+            <div class="absolute inset-0 poster-gradient pointer-events-none"></div>
             
-            <div class="absolute bottom-3 left-3 px-2 py-1 glass rounded-md flex items-center gap-1.5">
+            <div class="absolute bottom-3 left-3 px-2 py-1 glass rounded-md flex items-center gap-1.5 pointer-events-none">
                 <div class="w-4 h-4 bg-purple-500 rounded-sm flex items-center justify-center text-[10px] font-bold text-white">
                     {{ item.requested_by[0]|upper if item.requested_by else '?' }}
                 </div>
                 <span class="text-[10px] font-medium text-white truncate max-w-[80px]">{{ item.requested_by }}</span>
             </div>
 
-            <div class="absolute top-3 right-3 px-2 py-1 glass rounded-md text-[10px] font-bold text-white uppercase tracking-tighter">
+            <div class="absolute top-3 right-3 px-2 py-1 glass rounded-md text-[10px] font-bold text-white uppercase tracking-tighter pointer-events-none">
                 {% if item.type == 'movie' %} 🎬 Film {% else %} 📺 Série {% endif %}
             </div>
         </div>
         {% else %}
         <div class="col-span-full py-20 text-center border-2 border-dashed border-gray-800 rounded-2xl">
-            <p class="text-gray-500 italic">Le scan n'a pas encore trouvé de médias dans les watchlists.</p>
+            <p class="text-gray-500 italic">Le scan n'a pas encore trouvé de médias.</p>
         </div>
         {% endfor %}
     </div>
