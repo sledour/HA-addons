@@ -6,6 +6,7 @@ from overseerr_api import OverseerrClient
 from plex_api import PlexClient
 from tmdb_api import TMDBClient
 from database import Database
+from contextlib import asynccontextmanager
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s", handlers=[logging.StreamHandler(sys.stdout)])
 sys.stdout.reconfigure(line_buffering=True)
@@ -174,8 +175,12 @@ def run_sync():
         CACHE["status"] = f"Erreur : {str(e)}"
     finally: IS_SCANNING = False
 
-@app.on_event("startup")
-def startup_event(): Thread(target=run_sync).start()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Ce qui se passe au démarrage
+    Thread(target=run_sync).start()
+    yield
+    # Ce qui se passe à l'arrêt (si besoin)
 
 @app.get("/")
 def read_root(): return {"scan_in_progress": IS_SCANNING, "results": CACHE}
