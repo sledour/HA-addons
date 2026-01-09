@@ -175,9 +175,10 @@ def run_sync(sync_users=False):
                     tmdb_id = cached['tmdb_id']
                     m_type = cached['media_type']
                     poster = cached['poster_path']
+                    logger.info(f"DEBUG DB | Titre: {item['title']} | TMDB ID: {cached.get('tmdb_id')} | Poster: {cached.get('poster_path')}")
                 else:
                     # Cas : Nouveau média OU média connu mais sans poster
-                    logger.info(f"🔎 Recherche/Mise à jour TMDB pour : {item['title']}")
+                    logger.info(f"DEBUG DB | {item['title']} n'est pas encore en base")
                     tmdb_res = tmdb_client.search_multi(item['title'], item['year'])
                     
                     if tmdb_res:
