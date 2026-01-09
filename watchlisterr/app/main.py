@@ -4,7 +4,7 @@ from threading import Thread
 from datetime import datetime
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Response  # <--- AJOUT : Response
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -240,6 +240,7 @@ async def read_dashboard(request: Request):
         for item in wl.get("items", []):
             item_copy = item.copy()
             item_copy["requested_by"] = wl["name"]
+            # ON S'ASSURE QUE LE POSTER EST COPIÉ ICI
             item_copy["poster_path"] = item.get("poster_path")
             all_items.append(item_copy)
 
@@ -262,6 +263,7 @@ async def force_sync():
         return {"status": "started"}
     return {"status": "already_running"}
 
+# ROUTE PROXY POUR LES IMAGES (FIX HA INGRESS)
 @app.get("/proxy-image")
 async def proxy_image(url: str):
     import requests
