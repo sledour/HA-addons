@@ -170,21 +170,27 @@ def run_sync(sync_users=False):
                 tmdb_id, m_type, poster = None, item['type'], None
                 cached = db.get_cached_media(item['title'], item['year'])
                 
-                if cached:
+                # 2. Si le film est en DB MAIS que le poster est vide, on force un refresh TMDB
+                if cached and cached.get('poster_path'):
                     tmdb_id = cached['tmdb_id']
                     m_type = cached['media_type']
-                    poster = cached.get('poster_path') # Récupéré depuis la DB
+                    poster = cached['poster_path']
                 else:
-                    # 2. Si inconnu, on demande à TMDB
+                    # Cas : Nouveau média OU média connu mais sans poster
+                    logger.info(f"🔎 Recherche/Mise à jour TMDB pour : {item['title']}")
                     tmdb_res = tmdb_client.search_multi(item['title'], item['year'])
+                    
                     if tmdb_res:
                         tmdb_id = tmdb_res['tmdb_id']
                         m_type = tmdb_res['type']
-                        poster = tmdb_res.get('poster_path') # Ex: "/wwemzKWzjKYJFfCeiB57q3r4Bcm.jpg"
+                        poster = tmdb_res.get('poster_path')
                         
-                        # 3. On sauvegarde tout (ID + Poster) dans la DB pour la prochaine fois
+                        # On met à jour ou on insère (le REPLACE INTO de la DB s'en occupe)
                         db.save_media(tmdb_id, item['title'], m_type, item['year'], poster)
-                        logger.info(f"🆕 Nouveau média mis en cache avec poster : {item['title']}")
+                        if not cached:
+                            logger.info(f"🆕 Nouveau média mis en cache : {item['title']}")
+                        else:
+                            logger.info(f"♻️ Poster récupéré pour média existant : {item['title']}")
                 
                 match = ov_client.get_media_status(tmdb_id, m_type) if tmdb_id else {'status': 'Inconnu', 'can_request': False}
                 
