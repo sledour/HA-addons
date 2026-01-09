@@ -1,4 +1,4 @@
-# 0.3.5 - UI Dashboard Full Sync + Fix Posters & Names
+# 0.3.5 - UI Dashboard Full Sync + Fix Posters & Names + Detailed Logs
 import sys, logging, json, os, time, requests, sqlite3, collections
 from threading import Thread
 from datetime import datetime
@@ -45,13 +45,49 @@ IS_SCANNING = False
 CYCLE_COUNT = 0
 
 db = Database()
-templates = Jinja2Templates(directory="templates")
+templates = Jinja2Templates(directory="/app/templates")
 
 def get_hass_options():
     options_path = "/data/options.json"
     if os.path.exists(options_path):
         with open(options_path, 'r') as f: return json.load(f)
     return {}
+
+# --- FONCTION DE VÉRIFICATION DES APIS ---
+def check_apis(opts):
+    """Vérifie l'état des connexions Plex, Overseerr et TMDB"""
+    checks = {"plex": "❌ Erreur", "overseerr": "❌ Erreur", "tmdb": "❌ Erreur"}
+    
+    try:
+        p = PlexClient(opts.get('plex_token'), opts.get('plex_url')) # Correction plex_url
+        profile = p.get_my_profile()
+        if profile:
+            checks["plex"] = f"✅ Connecté ({profile['username']})"
+            logger.info(f"[CHECK] Plex: OK (User: {profile['username']})")
+    except Exception as e:
+        logger.error(f"[CHECK] Plex: HS -> {e}")
+
+    try:
+        url = f"{opts.get('overseerr_url').rstrip('/')}/api/v1/status"
+        headers = {"X-Api-Key": opts.get('overseerr_api_key')}
+        r = requests.get(url, headers=headers, timeout=5)
+        if r.status_code == 200:
+            checks["overseerr"] = "✅ Connecté"
+            logger.info("[CHECK] Overseerr: OK")
+    except Exception as e:
+        logger.error(f"[CHECK] Overseerr: HS -> {e}")
+
+    try:
+        tmdb_key = opts.get('tmdb_api_key')
+        r = requests.get(f"https://api.themoviedb.org/3/authentication/token/new?api_key={tmdb_key}", timeout=5)
+        if r.status_code in [200, 401]:
+            checks["tmdb"] = "✅ Connecté" if r.status_code == 200 else "❌ Clé Invalide"
+            logger.info(f"[CHECK] TMDB: {'OK' if r.status_code == 200 else 'Clé Invalide'}")
+    except Exception as e:
+        logger.error(f"[CHECK] TMDB: HS -> {e}")
+    
+    CACHE["api_status"] = checks
+    return checks
 
 # --- LOGIQUE DE SYNCHRONISATION ---
 
@@ -64,13 +100,9 @@ def run_sync_loop():
             interval = opts.get("sync_interval", 3)
             is_dry_run = opts.get("dry_run", True)
             
-            # 1. Sync Users tous les 100 cycles (ou au cycle 0)
-            include_users = (CYCLE_COUNT % 100 == 0)
+            check_apis(opts)
+            run_sync(sync_users=(CYCLE_COUNT % 100 == 0))
             
-            # 2. Exécution du scan
-            run_sync(sync_users=include_users)
-            
-            # Traitement des requêtes
             if "plex_watchlists" in CACHE:
                 ov_client = OverseerrClient(opts.get('overseerr_url'), opts.get('overseerr_api_key'))
                 for wl in CACHE["plex_watchlists"]:
@@ -78,6 +110,7 @@ def run_sync_loop():
                     if not ov_user_id: continue
                     for item in wl.get("items", []):
                         if item.get("can_request") is True:
+                            logger.info(f"📤 Requête pour {item['title']} ({wl['name']})")
                             ov_client.submit_request(
                                 tmdb_id=item["tmdb_id"],
                                 media_type=item["type"],
@@ -100,10 +133,9 @@ def run_sync(sync_users=False):
     try:
         opts = get_hass_options()
         ov_client = OverseerrClient(opts.get('overseerr_url'), opts.get('overseerr_api_key'))
-        plex_client = PlexClient(opts.get('plex_token'), opts.get('plex_server_url'))
+        plex_client = PlexClient(opts.get('plex_token'), opts.get('plex_url'))
         tmdb_client = TMDBClient(opts.get('tmdb_api_key'))
         
-        # Mapping des utilisateurs (Plex -> Overseerr)
         if sync_users:
             logger.info("👥 Synchronisation des mappings utilisateurs...")
             plex_users = []
@@ -117,6 +149,7 @@ def run_sync(sync_users=False):
                 match = next((u for u in ov_users if u['displayName'].lower() == p_user['username'].lower()), None)
                 if match:
                     db.save_user(p_user['plex_id'], p_user['username'], match['id'], p_user['role'])
+                    logger.info(f"✅ User mappé : {p_user['username']} -> {match['id']}")
 
         logger.info("🔍 Scan des Watchlists en cours...")
         my_profile = plex_client.get_my_profile()
@@ -127,10 +160,13 @@ def run_sync(sync_users=False):
         for f in friends: users_to_process.append({"plex_id": f['plex_id'], "username": f['username']})
         
         full_report = []
+        total_items = 0
         for user in users_to_process:
             watchlist = plex_client.get_watchlist(user['plex_id'])
+            logger.info(f"👤 Traitement de : {user['username']} ({len(watchlist)} médias)")
             items_with_status = []
             for item in watchlist:
+                total_items += 1
                 tmdb_id, m_type, poster = None, item['type'], None
                 cached = db.get_cached_media(item['title'], item['year'])
                 
@@ -141,6 +177,7 @@ def run_sync(sync_users=False):
                     if tmdb_res:
                         tmdb_id, m_type, poster = tmdb_res['tmdb_id'], tmdb_res['type'], tmdb_res.get('poster_path')
                         db.save_media(tmdb_id, item['title'], m_type, item['year'], poster)
+                        logger.info(f"🆕 TMDB mis en cache : {item['title']}")
                 
                 match = ov_client.get_media_status(tmdb_id, m_type) if tmdb_id else {'status': 'Inconnu', 'can_request': False}
                 
@@ -153,7 +190,7 @@ def run_sync(sync_users=False):
 
         CACHE["plex_watchlists"] = full_report
         CACHE["last_update"] = datetime.now().strftime("%H:%M:%S")
-        logger.info(f"✅ Scan terminé. {len(users_to_process)} utilisateurs traités.")
+        logger.info(f"✅ Scan terminé. {total_items} médias analysés.")
     except Exception as e:
         logger.error(f"❌ Erreur pendant run_sync: {e}")
     finally:
@@ -167,15 +204,12 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(lifespan=lifespan)
-# Correction du chemin statique pour Ingress
 app.mount("/static", StaticFiles(directory="/app"), name="static")
 
 @app.get("/", response_class=HTMLResponse)
 async def read_dashboard(request: Request):
     opts = get_hass_options()
     all_items = []
-    
-    # On aplatit la liste pour l'UI
     for wl in CACHE.get("plex_watchlists", []):
         for item in wl.get("items", []):
             item_copy = item.copy()
