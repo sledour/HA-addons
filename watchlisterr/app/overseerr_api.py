@@ -10,18 +10,21 @@ class OverseerrClient:
         self.headers = {"X-Api-Key": api_key}
 
     def get_users(self):
-        """Récupère la liste des utilisateurs Overseerr pour le mapping avec Plex"""
         url = f"{self.base_url}/api/v1/user"
         try:
-            response = requests.get(url, headers=self.headers, timeout=10)
-            if response.status_code == 200:
-                return response.json()
-            logger.error(f"Erreur lors de la récupération des utilisateurs Overseerr : {response.status_code}")
-            return []
+            r = requests.get(url, headers=self.headers, timeout=10)
+            if r.status_code == 200:
+                # IMPORTANT: Overseerr renvoie {"results": [...], "pageInfo": ...}
+                # On doit extraire la liste qui est dans 'results'
+                data = r.json()
+                return data.get('results', []) 
+            else:
+                logger.error(f"Erreur Overseerr get_users: {r.status_code}")
+                return []
         except Exception as e:
-            logger.error(f"Erreur connexion Overseerr (get_users) : {e}")
+            logger.error(f"Erreur connexion Overseerr: {e}")
             return []
-
+    
     def get_media_status(self, tmdb_id, media_type):
         """Vérifie le statut par ID TMDB (recommandé)"""
         # Overseerr attend 'tv' et non 'show'

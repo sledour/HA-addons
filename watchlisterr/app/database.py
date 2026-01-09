@@ -12,27 +12,29 @@ class Database:
         return sqlite3.connect(self.db_path)
 
     def _create_tables(self):
-        with self._get_connection() as conn:
-            cursor = conn.cursor()
-            # Table des utilisateurs (Plex UUID <-> Overseerr ID)
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS users (
-                    plex_uuid TEXT PRIMARY KEY,
-                    username TEXT,
-                    overseerr_id INTEGER,
-                    role TEXT
-                )
-            ''')
-            # Table Cache Media (TMDB ID, Type corrigé)
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS media_cache (
-                    tmdb_id INTEGER PRIMARY KEY,
-                    title TEXT,
-                    media_type TEXT,
-                    year INTEGER
-                )
-            ''')
-            conn.commit()
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute('''
+                    CREATE TABLE IF NOT EXISTS users (
+                        plex_uuid TEXT PRIMARY KEY,
+                        username TEXT,
+                        overseerr_id INTEGER,
+                        role TEXT
+                    )
+                ''')
+                cursor.execute('''
+                    CREATE TABLE IF NOT EXISTS media_cache (
+                        tmdb_id INTEGER PRIMARY KEY,
+                        title TEXT,
+                        media_type TEXT,
+                        year INTEGER
+                    )
+                ''')
+                conn.commit()
+                logger.info("✅ Base de données SQLite initialisée avec succès.")
+        except Exception as e:
+            logger.error(f"❌ Erreur initialisation SQLite: {e}")
 
     # --- Gestion Users ---
     def save_user(self, plex_uuid, username, overseerr_id, role):
