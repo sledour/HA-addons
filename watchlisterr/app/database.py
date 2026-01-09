@@ -9,6 +9,11 @@ class Database:
     def __init__(self, db_path="/data/watchlisterr.db"):
         self.db_path = db_path
         self._create_tables()
+        # On crée la connexion et le curseur dès l'initialisation
+        self.conn = sqlite3.connect(db_path, check_same_thread=False)
+        self.conn.row_factory = sqlite3.Row  # Permet d'accéder aux colonnes par nom
+        self.cursor = self.conn.cursor()
+        self.setup_db()
 
     def _get_connection(self):
         return sqlite3.connect(self.db_path)
