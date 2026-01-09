@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="logo.png" alt="Watchlisterr Logo" width="200">
+  <img src="https://raw.githubusercontent.com/sledour/HA-addons/main/watchlisterr/logo.png" alt="Watchlisterr Logo" width="200">
 </p>
 
 # 🎬 Watchlisterr
