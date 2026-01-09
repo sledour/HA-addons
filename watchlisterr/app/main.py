@@ -1,3 +1,4 @@
+# Stable version 0.1.0
 import sys, logging, json, os, time, requests
 from threading import Thread
 from fastapi import FastAPI
