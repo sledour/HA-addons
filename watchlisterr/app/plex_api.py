@@ -5,8 +5,9 @@ import uuid
 logger = logging.getLogger(__name__)
 
 class PlexClient:
-    def __init__(self, token):
+    def __init__(self, token, server_url=None):
         self.token = token
+        self.server_url = server_url.rstrip('/') if server_url else None
         self.headers = {
             "X-Plex-Token": self.token,
             "Accept": "application/json",
@@ -39,72 +40,53 @@ class PlexClient:
             logger.error(f"Erreur amis: {e}")
             return None
 
+    def extract_tmdb_id(self, guid_list):
+        if not guid_list: return None
+        for g in guid_list:
+            id_val = g.get('id', '')
+            if id_val.startswith('tmdb://'):
+                try:
+                    return int(id_val.split('://')[1])
+                except (IndexError, ValueError): continue
+        return None
+
+    def find_tmdb_id_on_server(self, title, year, media_type):
+        if not self.server_url: return None
+        try:
+            url = f"{self.server_url}/library/all"
+            params = {"title": title, "X-Plex-Token": self.token}
+            response = requests.get(url, headers=self.headers, params=params, timeout=10)
+            if response.status_code == 200:
+                metadata = response.json().get('MediaContainer', {}).get('Metadata', [])
+                for item in metadata:
+                    raw_type = item.get('type', '').lower()
+                    current_type = "tv" if raw_type in ["show", "series"] else "movie"
+                    if current_type == media_type:
+                        item_year = item.get('year')
+                        if not year or not item_year or str(item_year) == str(year):
+                            return self.extract_tmdb_id(item.get('Guid', []))
+            return None
+        except Exception: return None
+
     def get_watchlist(self, plex_uuid=None):
         try:
             if not plex_uuid:
-                # --- LOGIQUE SOI (REST) ---
                 url = "https://discover.provider.plex.tv/library/sections/watchlist/all"
-                params = {
-                    "X-Plex-Token": self.token,
-                    "format": "json",
-                    "X-Plex-Container-Start": 0,
-                    "X-Plex-Container-Size": 100, # Augmenté pour être large
-                    "cache_buster": str(uuid.uuid4())[:12]
-                }
+                params = {"X-Plex-Token": self.token, "format": "json"}
                 response = requests.get(url, headers=self.headers, params=params, timeout=15)
+                metadata = response.json().get('MediaContainer', {}).get('Metadata', [])
+                return [{"title": i.get('title'), "type": "tv" if i.get('type') in ["show","series","tv"] else "movie", 
+                         "year": i.get('year'), "tmdb_id": self.extract_tmdb_id(i.get('Guid', []))} for i in metadata]
             else:
-                # --- LOGIQUE AMIS (GraphQL) ---
                 url = "https://community.plex.tv/api"
-                query = """
-                query GetWatchlistHub($uuid: ID!, $first: PaginationInt!) {
-                    user(id: $uuid) {
-                        watchlist(first: $first) {
-                            nodes { 
-                                title 
-                                type 
-                                year 
-                            }
-                        }
-                    }
-                }
-                """
-                variables = {"uuid": plex_uuid, "first": 100}
-                response = requests.post(url, headers=self.headers, json={"query": query, "variables": variables}, timeout=15)
-
-            if response.status_code != 200:
-                logger.error(f"Plex API Error {response.status_code}")
-                return []
-
-            data = response.json()
-            items = []
-
-            # REMPLACER LES BOUCLES PAR CELLES-CI
-            if not plex_uuid:
-                metadata = data.get('MediaContainer', {}).get('Metadata', [])
-                for item in metadata:
-                    raw_type = item.get('type', '').lower()
-                    # Détection robuste du type
-                    clean_type = "tv" if raw_type in ["show", "series", "tv", "2"] else "movie"
-                    
-                    items.append({
-                        "title": item.get('title'),
-                        "type": clean_type,
-                        "year": item.get('year')
-                    })
-            else:
-                nodes = data.get('data', {}).get('user', {}).get('watchlist', {}).get('nodes', [])
-                for n in nodes:
-                    raw_type = n.get('type', '').lower()
-                    # En GraphQL, les types peuvent varier selon les versions
-                    clean_type = "tv" if raw_type in ["show", "series", "tv", "season", "episode"] else "movie"
-                    
-                    items.append({
-                        "title": n.get('title'),
-                        "type": clean_type,
-                        "year": n.get('year')
-                    })
-
-            return items
+                query = """query GetWatchlist($uuid: ID!, $first: PaginationInt!) { 
+                    user(id: $uuid) { watchlist(first: $first) { nodes { title type year guid } } } 
+                }"""
+                vars = {"uuid": plex_uuid, "first": 100}
+                response = requests.post(url, headers=self.headers, json={"query": query, "variables": vars}, timeout=15)
+                nodes = response.json().get('data', {}).get('user', {}).get('watchlist', {}).get('nodes', [])
+                return [{"title": n.get('title'), "type": "tv" if n.get('type') in ["show","series","tv"] else "movie", 
+                         "year": n.get('year'), "tmdb_id": None} for n in nodes]
         except Exception as e:
             logger.error(f"Erreur watchlist: {e}")
             return []
