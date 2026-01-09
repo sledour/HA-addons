@@ -21,7 +21,14 @@ CACHE = {
 }
 IS_SCANNING = False
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Ce qui se passe au démarrage
+    Thread(target=run_sync).start()
+    yield
+    # Ce qui se passe à l'arrêt (si besoin)
+
+app = FastAPI(lifespan=lifespan)
 db = Database()
 
 def get_hass_options():
@@ -175,12 +182,6 @@ def run_sync():
         CACHE["status"] = f"Erreur : {str(e)}"
     finally: IS_SCANNING = False
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # Ce qui se passe au démarrage
-    Thread(target=run_sync).start()
-    yield
-    # Ce qui se passe à l'arrêt (si besoin)
 
 @app.get("/")
 def read_root(): return {"scan_in_progress": IS_SCANNING, "results": CACHE}
