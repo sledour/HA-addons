@@ -51,4 +51,5 @@ Une fois l'add-on lancé, les données sont accessibles via Ingress
 - [ ] Si dry_run off, pas d'affcihage dans l'UI
 - [ ] Afficher poster
 - [ ] Stabiliser page web
+- [ ] Ajouter une page secrete avec le contenue de la db user et media
 - [ ] Activer l'envoi automatique des requêtes (Mode Production).
