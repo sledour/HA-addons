@@ -171,13 +171,20 @@ def run_sync(sync_users=False):
                 cached = db.get_cached_media(item['title'], item['year'])
                 
                 if cached:
-                    tmdb_id, m_type, poster = cached['tmdb_id'], cached['media_type'], cached.get('poster_path')
+                    tmdb_id = cached['tmdb_id']
+                    m_type = cached['media_type']
+                    poster = cached.get('poster_path') # Récupéré depuis la DB
                 else:
+                    # 2. Si inconnu, on demande à TMDB
                     tmdb_res = tmdb_client.search_multi(item['title'], item['year'])
                     if tmdb_res:
-                        tmdb_id, m_type, poster = tmdb_res['tmdb_id'], tmdb_res['type'], tmdb_res.get('poster_path')
+                        tmdb_id = tmdb_res['tmdb_id']
+                        m_type = tmdb_res['type']
+                        poster = tmdb_res.get('poster_path') # Ex: "/wwemzKWzjKYJFfCeiB57q3r4Bcm.jpg"
+                        
+                        # 3. On sauvegarde tout (ID + Poster) dans la DB pour la prochaine fois
                         db.save_media(tmdb_id, item['title'], m_type, item['year'], poster)
-                        logger.info(f"🆕 TMDB mis en cache : {item['title']}")
+                        logger.info(f"🆕 Nouveau média mis en cache avec poster : {item['title']}")
                 
                 match = ov_client.get_media_status(tmdb_id, m_type) if tmdb_id else {'status': 'Inconnu', 'can_request': False}
                 

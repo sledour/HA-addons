@@ -75,3 +75,16 @@ class Database:
                 INSERT OR IGNORE INTO media_cache (tmdb_id, title, media_type, year)
                 VALUES (?, ?, ?, ?)
             ''', (tmdb_id, title, media_type, year))
+
+    def setup_db(self):
+        # Ajoute poster_path à ta structure de table
+        self.cursor.execute('''
+            CREATE TABLE IF NOT EXISTS media (
+                tmdb_id INTEGER PRIMARY KEY,
+                title TEXT,
+                media_type TEXT,
+                year INTEGER,
+                poster_path TEXT,
+                last_updated DATETIME
+            )
+        ''')
