@@ -1,4 +1,4 @@
-import sys, logging, json, os, time, requests
+import sys, logging, json, os, time, requests, sqlite3
 from threading import Thread
 from fastapi import FastAPI
 import uvicorn
@@ -156,6 +156,19 @@ def run_sync():
         stats["total_plex"] = sum(u["watchlist_count"] for u in full_report)
         CACHE = {"status": "Données à jour", "last_update": time.strftime("%Y-%m-%d %H:%M:%S"), "stats": stats, "plex_watchlists": full_report, "api_status": api_results}
         logger.info(f"Scan terminé : {stats['total_plex']} items traités.")
+
+        # --- AJOUT : RAPPORT DE BASE DE DONNÉES ---
+        with db._get_connection() as conn:
+            user_count = conn.execute("SELECT count(*) FROM users").fetchone()[0]
+            cache_count = conn.execute("SELECT count(*) FROM media_cache").fetchone()[0]
+            logger.info(f"📊 [DATABASE] État de la base : {user_count} utilisateurs mappés, {cache_count} médias en cache.")
+            
+            # Optionnel : Lister les noms des users en DB pour confirmer
+            users = conn.execute("SELECT username FROM users").fetchall()
+            user_list = ", ".join([u[0] for u in users])
+            logger.info(f"👥 [DATABASE] Utilisateurs en base : {user_list}")
+        # ------------------------------------------
+
     except Exception as e:
         logger.error(f"Erreur scan : {e}")
         CACHE["status"] = f"Erreur : {str(e)}"
@@ -173,6 +186,20 @@ def force_sync():
         Thread(target=run_sync).start()
         return {"message": "Scan lancé"}
     return {"message": "Déjà en cours"}
+
+@app.get("/debug/users")
+def debug_users():
+    with db._get_connection() as conn:
+        conn.row_factory = sqlite3.Row
+        res = conn.execute("SELECT * FROM users").fetchall()
+        return [dict(row) for row in res]
+
+@app.get("/debug/cache")
+def debug_cache():
+    with db._get_connection() as conn:
+        conn.row_factory = sqlite3.Row
+        res = conn.execute("SELECT * FROM media_cache").fetchall()
+        return [dict(row) for row in res]
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=1604)
