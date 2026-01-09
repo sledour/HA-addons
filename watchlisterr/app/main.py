@@ -75,7 +75,7 @@ def run_sync_loop():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Ce qui se passe au démarrage
-    Thread(target=run_sync).start()
+    Thread(target=run_sync_loop, daemon=True).start()
     yield
     # Ce qui se passe à l'arrêt (si besoin)
 
