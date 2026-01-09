@@ -1,4 +1,4 @@
-# Stable version 0.1.0
+# 0.2.0 - Stable with DB
 import requests
 import logging
 

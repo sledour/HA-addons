@@ -1,3 +1,4 @@
+# 0.2.0 - Stable with DB
 import sqlite3
 import logging
 

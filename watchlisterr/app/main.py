@@ -1,3 +1,4 @@
+# 0.2.0 - Stable with DB
 import sys, logging, json, os, time, requests, sqlite3
 from threading import Thread
 from fastapi import FastAPI
