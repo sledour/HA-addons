@@ -1,6 +1,6 @@
 FROM ghcr.io/home-assistant/amd64-base:latest
 
-# Installation de Python et Pip
+# Installation de Python et des outils système
 RUN apk add --no-cache \
     python3 \
     py3-pip \
@@ -10,13 +10,16 @@ RUN apk add --no-cache \
 
 WORKDIR /app
 
-# Installation des dépendances
+# Installation des dépendances Python
+# On ajoute jinja2 explicitement au cas où il manque dans requirements.txt
 COPY requirements.txt .
-RUN pip3 install --no-cache-dir --break-system-packages -r requirements.txt
+RUN pip3 install --no-cache-dir --break-system-packages \
+    -r requirements.txt \
+    jinja2 \
+    python-multipart
 
-# Copie du code
+# Copie de tout le dossier app (incluant templates/ et images)
 COPY app/ /app/
 
-# Au lieu d'un script externe, on demande à HASS de lancer directement Python
-# On utilise la forme "exec" pour que S6 puisse le gérer
+# Exécution
 CMD ["python3", "/app/main.py"]
