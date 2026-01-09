@@ -8,6 +8,9 @@ from plex_api import PlexClient
 from tmdb_api import TMDBClient
 from database import Database
 from contextlib import asynccontextmanager
+from fastapi.staticfiles import StaticFiles
+import collections
+from datetime import datetime
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s", handlers=[logging.StreamHandler(sys.stdout)])
 sys.stdout.reconfigure(line_buffering=True)
@@ -80,6 +83,7 @@ async def lifespan(app: FastAPI):
     # Ce qui se passe à l'arrêt (si besoin)
 
 app = FastAPI(lifespan=lifespan)
+app.mount("/static", StaticFiles(directory="./"), name="static")
 db = Database()
 
 def check_apis(opts):

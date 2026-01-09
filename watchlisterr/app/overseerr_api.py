@@ -16,19 +16,29 @@ class OverseerrClient:
             logger.info(f"🧪 [SIMULATION] Requête pour '{title}' (ID:{tmdb_id}) | User ID:{user_id}")
             return True
 
-        # Mode PRODUCTION (Actif si is_simulation est False)
+        # --- MODE PRODUCTION ---
         url = f"{self.base_url}/api/v1/request"
-        payload = {"mediaType": media_type, "mediaId": int(tmdb_id), "userId": int(user_id)}
+        
+        # On s'assure que les IDs sont bien des entiers pour le JSON
+        payload = {
+            "mediaType": "tv" if media_type in ["show", "tv"] else "movie",
+            "mediaId": int(tmdb_id),
+            "userId": int(user_id) if user_id else None
+        }
+
         try:
-            r = requests.post(url, json=payload, headers=self.headers, timeout=10)
+            r = requests.post(url, json=payload, headers=self.headers, timeout=15)
             if r.status_code == 201:
-                logger.info(f"🚀 [LIVE] Requête RÉUSSIE pour '{title}'")
+                logger.info(f"🚀 [LIVE] Succès ! '{title}' est maintenant en cours de traitement sur UltraCC.")
+                return True
+            elif r.status_code == 409:
+                logger.warning(f"⚠️ [LIVE] '{title}' est déjà demandé dans Overseerr.")
                 return True
             else:
-                logger.error(f"❌ [LIVE] Échec Overseerr ({r.status_code}): {r.text}")
+                logger.error(f"❌ [LIVE] Erreur Overseerr ({r.status_code}): {r.text}")
                 return False
         except Exception as e:
-            logger.error(f"❌ [LIVE] Erreur connexion : {e}")
+            logger.error(f"❌ [LIVE] Erreur critique lors de l'envoi : {e}")
             return False
         
     def get_users(self):

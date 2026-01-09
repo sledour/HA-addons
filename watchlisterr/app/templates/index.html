@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Watchlisterr | Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Fira+Code&display=swap" rel="stylesheet">
+    <style>
+        body { background-color: #0B0F1A; font-family: 'Inter', sans-serif; }
+        .matrix-bg { background-color: #050505; }
+        .glass { background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); }
+        .poster-gradient { background: linear-gradient(0deg, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 40%); }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #0B0F1A; }
+        ::-webkit-scrollbar-thumb { background: #1F2937; border-radius: 10px; }
+        /* Animation pour le logo au survol */
+        .logo-glow { filter: drop-shadow(0 0 8px rgba(124, 58, 237, 0.4)); transition: all 0.3s ease; }
+        .logo-glow:hover { filter: drop-shadow(0 0 12px rgba(124, 58, 237, 0.7)); transform: scale(1.02); }
+    </style>
+</head>
+<body class="text-gray-200 min-h-screen p-4 md:p-8" hx-get="/" hx-trigger="every 30s" hx-select="body" hx-swap="outerHTML">
+
+    <header class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4 mb-10 p-4 bg-gray-900/50 rounded-2xl border border-gray-800">
+        <div class="flex items-center gap-6">
+            <div class="flex items-center gap-3">
+                <img src="/static/logo.png" alt="Watchlisterr Logo" class="h-10 w-auto object-contain logo-glow">
+                <span class="text-[10px] font-mono text-gray-600 self-end mb-1">v0.3.0</span>
+            </div>
+            
+            <div class="flex gap-3">
+                <span class="flex items-center gap-2 px-3 py-1 bg-gray-800 rounded-full text-xs font-medium border border-gray-700">
+                    <span class="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_#22c55e]"></span> Plex
+                </span>
+                <span class="flex items-center gap-2 px-3 py-1 bg-gray-800 rounded-full text-xs font-medium border border-gray-700">
+                    <span class="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_#22c55e]"></span> Overseerr
+                </span>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-6">
+            <div class="flex items-center gap-3 bg-gray-800/50 px-4 py-2 rounded-xl border border-gray-700">
+                <span class="text-xs font-bold uppercase tracking-wider text-gray-400">Dry Run</span>
+                <button class="w-12 h-6 flex items-center {% if dry_run %}bg-orange-500{% else %}bg-purple-600{% endif %} rounded-full p-1 duration-300 ease-in-out">
+                    <div class="bg-white w-4 h-4 rounded-full shadow-md transform {% if dry_run %}translate-x-6{% else %}translate-x-0{% endif %}"></div>
+                </button>
+            </div>
+            
+            <button hx-get="/sync" hx-swap="none" class="px-5 py-2 bg-purple-600 hover:bg-purple-700 rounded-xl font-bold transition-all flex items-center gap-2 active:scale-95">
+                <span>Sync Now</span>
+                <svg class="w-4 h-4 {% if is_scanning %}animate-spin{% endif %}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+            </button>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto mb-10">
+        <h2 class="text-lg font-semibold mb-6 flex items-center gap-2">
+            🚀 Prochaines Requêtes <span class="text-gray-500 font-normal">({{ stats.to_overseerr if stats else 0 }})</span>
+        </h2>
+        
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
+            {% for item in items_to_request %}
+            <div class="relative group aspect-[2/3] rounded-xl overflow-hidden border border-gray-800 transition-all hover:border-purple-500 hover:scale-105 shadow-2xl">
+                <img src="https://image.tmdb.org/t/p/w500/{{ item.poster_path }}" alt="{{ item.title }}" class="w-full h-full object-cover">
+                
+                <div class="absolute inset-0 poster-gradient"></div>
+                
+                <div class="absolute bottom-3 left-3 px-2 py-1 glass rounded-md flex items-center gap-1.5">
+                    <div class="w-4 h-4 bg-purple-500 rounded-sm flex items-center justify-center text-[10px] font-bold">{{ item.requested_by[0]|upper if item.requested_by else '?' }}</div>
+                    <span class="text-[10px] font-medium text-white truncate max-w-[80px]">{{ item.requested_by }}</span>
+                </div>
+
+                <div class="absolute bottom-3 right-3 px-2 py-1 glass rounded-md text-[10px]">
+                    {% if item.type == 'movie' %} 🎬 Film {% else %} 📺 Série {% endif %}
+                </div>
+            </div>
+            {% else %}
+            <div class="col-span-full py-20 text-center border-2 border-dashed border-gray-800 rounded-2xl">
+                <p class="text-gray-500">Aucune nouvelle requête en attente.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </main>
+
+    <section class="max-w-7xl mx-auto">
+        <div class="flex items-center justify-between mb-3 px-1">
+            <h2 class="text-xs font-bold uppercase tracking-widest text-gray-500">Live Activity Logs</h2>
+            <span class="text-[10px] font-mono text-purple-400">Cycle: #{{ cycle }}</span>
+        </div>
+        <div class="matrix-bg border border-gray-800 rounded-xl p-4 h-64 overflow-y-auto font-mono text-sm shadow-inner">
+            {% for log in logs %}
+            <div class="mb-1">
+                <span class="text-gray-600">[{{ log.time }}]</span>
+                <span class="{% if 'INFO' in log.msg %}text-green-500{% elif 'SUCCESS' in log.msg %}text-white{% elif 'WARNING' in log.msg %}text-orange-400{% elif 'ERROR' in log.msg %}text-red-500 bg-black px-1 border border-red-900{% endif %}">
+                    {{ log.msg }}
+                </span>
+            </div>
+            {% endfor %}
+            <div class="animate-pulse inline-block w-2 h-4 bg-green-500 ml-1"></div>
+        </div>
+    </section>
+
+</body>
+</html>

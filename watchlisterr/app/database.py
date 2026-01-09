@@ -32,6 +32,15 @@ class Database:
                         year INTEGER
                     )
                 ''')
+                cursor.execute('''
+                    CREATE TABLE IF NOT EXISTS media_cache (
+                        tmdb_id INTEGER PRIMARY KEY,
+                        title TEXT,
+                        type TEXT,
+                        poster_path TEXT,
+                        added_at DATETIME
+                    )
+                ''')
                 conn.commit()
                 logger.info("✅ Base de données SQLite initialisée avec succès.")
         except Exception as e:

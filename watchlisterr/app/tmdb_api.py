@@ -43,3 +43,22 @@ class TMDBClient:
         except Exception as e:
             logger.error(f"Erreur recherche TMDB pour {title}: {e}")
             return None
+        
+    def get_media_details(self, title, media_type):
+        search_type = "movie" if media_type == "movie" else "tv"
+        url = f"{self.base_url}/search/{search_type}"
+        params = {"api_key": self.api_key, "query": title, "language": "fr-FR"}
+        
+        try:
+            r = requests.get(url, params=params)
+            results = r.json().get('results', [])
+            if results:
+                first = results[0]
+                return {
+                    "tmdb_id": first['id'],
+                    "title": first.get('title') or first.get('name'),
+                    "poster_path": first.get('poster_path') # On récupère le /xxxxx.jpg
+                }
+        except Exception as e:
+            logger.error(f"Erreur TMDB pour {title}: {e}")
+        return None
