@@ -22,18 +22,26 @@
 <body class="text-gray-200 min-h-screen p-4 md:p-8" hx-get="/" hx-trigger="every 30s" hx-select="body" hx-swap="outerHTML">
 
 <header class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4 mb-10 p-4 bg-gray-900/50 rounded-2xl border border-gray-800">
-    <div class="flex items-center gap-6">
+ <div class="flex items-center gap-6">
         <div class="flex items-center gap-3">
             <img src="static/logo.png" alt="Logo" class="h-10 w-auto logo-glow">
             <span class="text-[10px] font-mono text-gray-600 self-end mb-1">v0.3.5</span>
         </div>
         
         <div class="flex gap-3">
-            <span class="flex items-center gap-2 px-3 py-1 bg-gray-800 rounded-full text-xs font-medium border border-gray-700">
-                <span class="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_#22c55e]"></span> Plex
+            <span class="flex items-center gap-2 px-3 py-1 bg-gray-800 rounded-full text-xs font-medium border border-gray-700" title="{{ api_status.plex }}">
+                <span class="w-2 h-2 rounded-full {% if '✅' in api_status.plex %}bg-green-500 shadow-[0_0_8px_#22c55e]{% else %}bg-red-500 shadow-[0_0_8px_#ef4444]{% endif %}"></span> 
+                Plex
             </span>
-            <span class="flex items-center gap-2 px-3 py-1 bg-gray-800 rounded-full text-xs font-medium border border-gray-700">
-                <span class="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_#22c55e]"></span> Overseerr
+
+            <span class="flex items-center gap-2 px-3 py-1 bg-gray-800 rounded-full text-xs font-medium border border-gray-700" title="{{ api_status.overseerr }}">
+                <span class="w-2 h-2 rounded-full {% if '✅' in api_status.overseerr %}bg-green-500 shadow-[0_0_8px_#22c55e]{% else %}bg-red-500 shadow-[0_0_8px_#ef4444]{% endif %}"></span> 
+                Overseerr
+            </span>
+
+            <span class="flex items-center gap-2 px-3 py-1 bg-gray-800 rounded-full text-xs font-medium border border-gray-700" title="{{ api_status.tmdb }}">
+                <span class="w-2 h-2 rounded-full {% if '✅' in api_status.tmdb %}bg-green-500 shadow-[0_0_8px_#22c55e]{% else %}bg-red-500 shadow-[0_0_8px_#ef4444]{% endif %}"></span> 
+                TMDB
             </span>
         </div>
     </div>
