@@ -1,0 +1,28 @@
+name: "Watchlisterr"
+description: "Synchronisation des watchlists Plex vers Overseerr"
+version: "0.0.31"
+slug: "watchlisterr"
+arch:
+- aarch64
+- amd64
+- armv7
+init: false
+ingress: true
+ingress_port: 1604
+panel_icon: "mdi:movie-sync"
+panel_title: "Watchlisterr"
+startup: services
+options:
+  log_level: info
+  plex_url: "http://192.168.x.x:32400"
+  plex_token: ""
+  overseerr_url: "http://192.168.x.x:5055"
+  overseerr_api_key: ""
+  sync_interval: 60
+schema:
+  log_level: list(debug|info|warning|error|fatal)?
+  plex_url: str
+  plex_token: password
+  overseerr_url: str
+  overseerr_api_key: password
+  sync_interval: int(10,1440)
