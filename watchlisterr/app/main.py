@@ -237,6 +237,7 @@ def run_sync(sync_users=False):
                     "tmdb_id": tmdb_id, 
                     "can_request": match.get('can_request', False), 
                     "overseerr_status": match.get('status'),
+                    "overseerr_id": True if match.get('status') in ['PENDING', 'PROCESSING', 'PARTIALLY_AVAILABLE'] else False, # ID pour icône Overseerr
                     "on_server": on_server, # Flag pour icône Plex
                     "requested_by": username # Optionnel pour affichage
                 })
