@@ -1,5 +1,6 @@
 import sqlite3
 import logging
+import sys
 from datetime import datetime
 
 logger = logging.getLogger("watchlisterr")
@@ -14,16 +15,27 @@ class Database:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
                 
-                # --- AJOUT : FORCER LA MIGRATION SI LA COLONNE MANQUE ---
+                # --- MIGRATION FORCÉE : VÉRIFICATION DES COLONNES ---
+                
+                # 1. Vérification pour la table MEDIA_CACHE (on_server)
                 try:
                     cursor.execute("SELECT on_server FROM media_cache LIMIT 1")
                 except sqlite3.OperationalError:
-                    # On ne log que si la table existe déjà mais sans la colonne
-                    logger.warning("⚠️ Ancienne base détectée (colonne on_server manquante). Nettoyage pour mise à jour...")
-                    cursor.execute("DROP TABLE IF EXISTS media_cache")
-                # -------------------------------------------------------
+                    if "no such table" not in str(sys.exc_info()[1]).lower():
+                        logger.warning("⚠️ Ancienne table media_cache détectée. Nettoyage...")
+                        cursor.execute("DROP TABLE IF EXISTS media_cache")
+
+                # 2. Vérification pour la table USERS (plex_id)
+                try:
+                    cursor.execute("SELECT plex_id FROM users LIMIT 1")
+                except sqlite3.OperationalError:
+                    if "no such table" not in str(sys.exc_info()[1]).lower():
+                        logger.warning("⚠️ Ancienne table users détectée. Nettoyage...")
+                        cursor.execute("DROP TABLE IF EXISTS users")
                 
-                # Table des utilisateurs (Plex <-> Overseerr)
+                # --- CRÉATION DES TABLES PROPRES ---
+                
+                # Table des utilisateurs
                 cursor.execute('''
                     CREATE TABLE IF NOT EXISTS users (
                         plex_id TEXT PRIMARY KEY,
@@ -33,7 +45,7 @@ class Database:
                     )
                 ''')
 
-                # Table Cache Média unique avec support de l'état Plex (on_server)
+                # Table Cache Média
                 cursor.execute('''
                     CREATE TABLE IF NOT EXISTS media_cache (
                         tmdb_id INTEGER PRIMARY KEY,
@@ -45,6 +57,7 @@ class Database:
                         added_at DATETIME
                     )
                 ''')
+                
                 conn.commit()
                 logger.info("✅ Base de données SQLite initialisée avec succès.")
                 
