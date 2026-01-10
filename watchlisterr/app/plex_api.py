@@ -109,9 +109,10 @@ class PlexClient:
                 
                 watchlist = []
                 for n in nodes:
+                    raw_type = n.get('type', '').lower()
                     watchlist.append({
                         "title": n.get('title'), 
-                        "type": "tv" if n.get('type') in ["show","series","tv"] else "movie", 
+                        "type": "tv" if raw_type in ["show", "series", "tv", "season", "episode"] else "movie", 
                         "year": n.get('year'), 
                         # ICI: On extrait enfin l'ID TMDB au lieu de mettre None
                         "tmdb_id": self.parse_guid_string(n.get('guid'))
