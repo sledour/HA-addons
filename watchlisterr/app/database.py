@@ -1,4 +1,3 @@
-# 0.3.0 - Stable with DB
 import sqlite3
 import logging
 from datetime import datetime
@@ -8,128 +7,104 @@ logger = logging.getLogger("watchlisterr")
 class Database:
     def __init__(self, db_path="/data/watchlisterr.db"):
         self.db_path = db_path
-        self._create_tables()
-        # On crée la connexion et le curseur dès l'initialisation
-        self.conn = sqlite3.connect(db_path, check_same_thread=False)
-        self.conn.row_factory = sqlite3.Row  # Permet d'accéder aux colonnes par nom
-        self.cursor = self.conn.cursor()
-        self.setup_db()
+        self.create_tables()
 
-    def _get_connection(self):
-        return sqlite3.connect(self.db_path)
-
-    def _create_tables(self):
+    def create_tables(self):
         try:
-            with self._get_connection() as conn:
+            with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
+                
+                # --- AJOUT : FORCER LA MIGRATION SI LA COLONNE MANQUE ---
+                try:
+                    cursor.execute("SELECT on_server FROM media_cache LIMIT 1")
+                except sqlite3.OperationalError:
+                    # On ne log que si la table existe déjà mais sans la colonne
+                    logger.warning("⚠️ Ancienne base détectée (colonne on_server manquante). Nettoyage pour mise à jour...")
+                    cursor.execute("DROP TABLE IF EXISTS media_cache")
+                # -------------------------------------------------------
+                
+                # Table des utilisateurs (Plex <-> Overseerr)
                 cursor.execute('''
                     CREATE TABLE IF NOT EXISTS users (
-                        plex_uuid TEXT PRIMARY KEY,
+                        plex_id TEXT PRIMARY KEY,
                         username TEXT,
                         overseerr_id INTEGER,
                         role TEXT
                     )
                 ''')
+
+                # Table Cache Média unique avec support de l'état Plex (on_server)
                 cursor.execute('''
                     CREATE TABLE IF NOT EXISTS media_cache (
                         tmdb_id INTEGER PRIMARY KEY,
                         title TEXT,
                         media_type TEXT,
-                        year INTEGER
-                    )
-                ''')
-                cursor.execute('''
-                    CREATE TABLE IF NOT EXISTS media_cache (
-                        tmdb_id INTEGER PRIMARY KEY,
-                        title TEXT,
-                        type TEXT,
+                        year INTEGER,
                         poster_path TEXT,
+                        on_server INTEGER DEFAULT 0,
                         added_at DATETIME
                     )
                 ''')
                 conn.commit()
                 logger.info("✅ Base de données SQLite initialisée avec succès.")
+                
         except Exception as e:
             logger.error(f"❌ Erreur initialisation SQLite: {e}")
 
-    def save_user(self, plex_uuid, username, overseerr_id, role):
-        with self._get_connection() as conn:
-            conn.execute('''
-                INSERT OR REPLACE INTO users (plex_uuid, username, overseerr_id, role)
+    def save_user(self, plex_id, username, overseerr_id, role):
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT OR REPLACE INTO users (plex_id, username, overseerr_id, role)
                 VALUES (?, ?, ?, ?)
-            ''', (plex_uuid, username, overseerr_id, role))
+            ''', (plex_id, username, overseerr_id, role))
+            conn.commit()
 
     def get_overseerr_id_by_name(self, username):
-        """Récupère l'ID Overseerr via le nom d'utilisateur (pour le scan réactif)"""
-        with self._get_connection() as conn:
+        with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT overseerr_id FROM users WHERE username = ?", (username,))
-            res = cursor.fetchone()
-            return res[0] if res else None
+            cursor.execute('SELECT overseerr_id FROM users WHERE LOWER(username) = LOWER(?)', (username,))
+            row = cursor.fetchone()
+            return row[0] if row else None
+
+    def save_media(self, tmdb_id, title, media_type, year, poster_path, on_server=0):
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT OR REPLACE INTO media_cache 
+                (tmdb_id, title, media_type, year, poster_path, on_server, added_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            ''', (tmdb_id, title, media_type, year, poster_path, on_server, datetime.now()))
+            conn.commit()
 
     def get_cached_media(self, title, year):
-        conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        
-        # On utilise LOWER pour ignorer la casse et CAST pour être sûr de l'année
-        query = "SELECT * FROM media WHERE LOWER(title) = LOWER(?) AND CAST(year AS TEXT) = CAST(? AS TEXT)"
-        cursor.execute(query, (title, year))
-        
-        row = cursor.fetchone()
-        conn.close()
-        
-        if row:
-            return dict(row)
-        return None
-    
-    def save_media(self, tmdb_id, title, media_type, year, poster_path):
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        # INSERT OR REPLACE permet de mettre à jour le poster si le film existe déjà
-        query = """
-            INSERT OR REPLACE INTO media (tmdb_id, title, media_type, year, poster_path)
-            VALUES (?, ?, ?, ?, ?)
-        """
-        cursor.execute(query, (tmdb_id, title, media_type, year, poster_path))
-        conn.commit()
-        conn.close()
-
-    def setup_db(self):
-        # Ajoute poster_path à ta structure de table
-        self.cursor.execute('''
-            CREATE TABLE IF NOT EXISTS media (
-                tmdb_id INTEGER PRIMARY KEY,
-                title TEXT,
-                media_type TEXT,
-                year INTEGER,
-                poster_path TEXT,
-                last_updated DATETIME
-            )
-        ''')
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT * FROM media_cache 
+                WHERE LOWER(title) = LOWER(?) AND year = ?
+            ''', (title, year))
+            row = cursor.fetchone()
+            return dict(row) if row else None
 
     def get_all_users(self):
-        conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row  # Permet d'accéder aux colonnes par nom
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM users")
-        rows = [dict(row) for row in cursor.fetchall()]
-        conn.close()
-        return rows
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM users')
+            return [dict(row) for row in cursor.fetchall()]
 
     def get_all_media(self):
-        conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM media ORDER BY title ASC")
-        rows = [dict(row) for row in cursor.fetchall()]
-        conn.close()
-        return rows
-    
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM media_cache ORDER BY added_at DESC')
+            return [dict(row) for row in cursor.fetchall()]
+
     def clear_tables(self):
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        cursor.execute("DELETE FROM media")
-        cursor.execute("DELETE FROM users")
-        conn.commit()
-        conn.close()
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute('DELETE FROM media_cache')
+            cursor.execute('DELETE FROM users')
+            conn.commit()

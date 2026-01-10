@@ -1,10 +1,10 @@
-# 0.3.5 - UI Dashboard Full Sync + Fix Posters & Names + Detailed Logs
+# 0.3.5 - UI Dashboard Full Sync + Fix Posters & Names + Detailed Logs + DB Cache Flags
 import sys, logging, json, os, time, requests, sqlite3, collections
 from threading import Thread
 from datetime import datetime
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request, Response  # <--- AJOUT : Response
+from fastapi import FastAPI, Request, Response
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -59,7 +59,7 @@ def check_apis(opts):
     checks = {"plex": "❌ Erreur", "overseerr": "❌ Erreur", "tmdb": "❌ Erreur"}
     
     try:
-        p = PlexClient(opts.get('plex_token'), opts.get('plex_url')) # Correction plex_url
+        p = PlexClient(opts.get('plex_token'), opts.get('plex_url'))
         profile = p.get_my_profile()
         if profile:
             checks["plex"] = f"✅ Connecté ({profile['username']})"
@@ -161,9 +161,8 @@ def run_sync(sync_users=False):
         for f in friends: users_to_process.append({"plex_id": f['plex_id'], "username": f['username']})
        
         # --- 2. EXTRACTION DES MÉDIAS UNIQUES ---
-        # On regroupe par titre+année pour ne pas appeler TMDB 10 fois pour le même film
         unique_items = {}
-        user_watchlists = {} # Pour reconstruire le rapport final
+        user_watchlists = {}
 
         for user in users_to_process:
             watchlist = plex_client.get_watchlist(user['plex_id'])
@@ -175,46 +174,44 @@ def run_sync(sync_users=False):
                     unique_items[key] = item
 
         # --- 3. TRAITEMENT DES MÉDIAS (CACHE OU TMDB) ---
-        media_info_map = {} # Stocke les résultats (tmdb_id, poster, etc.)
+        media_info_map = {}
         
         for key, item in unique_items.items():
             cached = db.get_cached_media(item['title'], item['year'])
             
+            # Détection disponibilité Plex
+            plex_type = 'tv' if item.get('type') in ['show', 'tv', 'season', 'episode'] else 'movie'
+            on_plex = plex_client.find_tmdb_id_on_server(item['title'], item['year'], plex_type) is not None
+
             if cached and cached.get('poster_path') and cached['poster_path'] != "None":
                 logger.info(f"📦 DEBUG DB | {item['title']} chargé depuis cache")
+                db.save_media(cached['tmdb_id'], item['title'], cached['media_type'], item['year'], cached['poster_path'], on_server=(1 if on_plex else 0))
                 media_info_map[key] = {
                     "tmdb_id": cached['tmdb_id'],
                     "m_type": cached['media_type'],
-                    "poster": cached['poster_path']
+                    "poster": cached['poster_path'],
+                    "on_server": on_plex
                 }
             else:
-                # 1. On détermine le type correct pour TMDB
-                # Plex peut renvoyer 'show', 'season', 'episode' ou 'movie'
-                plex_type = item.get('type', 'movie')
-                if plex_type in ['show', 'tv', 'season', 'episode']:
-                    search_type = 'tv'
-                else:
-                    search_type = 'movie'
-
-                logger.info(f"🔎 Recherche TMDB ({search_type}) pour : {item['title']}")
-                
+                logger.info(f"🔎 Recherche TMDB ({plex_type}) pour : {item['title']}")
                 tmdb_res = tmdb_client.search_multi(
                     title=item['title'], 
                     year=item['year'],
                     target_id=item.get('tmdb_id'),
-                    media_type=search_type  # <--- On utilise search_type ici
+                    media_type=plex_type
                 )
                 
                 if tmdb_res:
-                    db.save_media(tmdb_res['tmdb_id'], item['title'], tmdb_res['type'], item['year'], tmdb_res['poster_path'])
-                    logger.info(f"✅ Mis en cache : {item['title']}")
+                    db.save_media(tmdb_res['tmdb_id'], item['title'], tmdb_res['type'], item['year'], tmdb_res['poster_path'], on_server=(1 if on_plex else 0))
+                    logger.info(f"✅ Mis en cache : {item['title']} (Plex: {on_plex})")
                     media_info_map[key] = {
                         "tmdb_id": tmdb_res['tmdb_id'],
                         "m_type": tmdb_res['type'],
-                        "poster": tmdb_res['poster_path']
+                        "poster": tmdb_res['poster_path'],
+                        "on_server": on_plex
                     }
                 else:
-                    media_info_map[key] = {"tmdb_id": None, "m_type": item['type'], "poster": None}
+                    media_info_map[key] = {"tmdb_id": None, "m_type": item['type'], "poster": None, "on_server": on_plex}
 
         # --- 4. RÉGÉNÉRATION DU RAPPORT CACHÉ ---
         full_report = []
@@ -223,12 +220,11 @@ def run_sync(sync_users=False):
             for item in watchlist:
                 key = f"{item['title']}-{item['year']}".lower()
                 info = media_info_map.get(key, {})
-                
-                # Check Overseerr Status
                 tmdb_id = info.get('tmdb_id')
                 m_type = info.get('m_type', item['type'])
+                
+                # Check Overseerr Status
                 match = ov_client.get_media_status(tmdb_id, m_type) if tmdb_id else {'status': 'Inconnu', 'can_request': False}
-                on_server = plex_client.find_tmdb_id_on_server(item['title'], item['year'], m_type) is not None
                 
                 items_with_status.append({
                     "title": item['title'], 
@@ -237,9 +233,9 @@ def run_sync(sync_users=False):
                     "tmdb_id": tmdb_id, 
                     "can_request": match.get('can_request', False), 
                     "overseerr_status": match.get('status'),
-                    "overseerr_id": True if match.get('status') in ['PENDING', 'PROCESSING', 'PARTIALLY_AVAILABLE'] else False, # ID pour icône Overseerr
-                    "on_server": on_server, # Flag pour icône Plex
-                    "requested_by": username # Optionnel pour affichage
+                    "overseerr_id": True if match.get('status') in ['PENDING', 'PROCESSING', 'PARTIALLY_AVAILABLE'] else False,
+                    "on_server": info.get('on_server', False),
+                    "requested_by": username
                 })
             full_report.append({"name": username, "items": items_with_status})
 
@@ -254,14 +250,13 @@ def run_sync(sync_users=False):
     
 def get_version():
     try:
-        # Si tu as copié le config.yaml dans le conteneur via le Dockerfile
         with open("/app/config.yaml", 'r') as f:
             for line in f:
                 if line.startswith("version:"):
                     return line.split(":")[1].strip().replace('"', '').replace("'", "")
     except:
         pass
-    return "0.3.5" # Fallback
+    return "0.3.5"
 
 VERSION = get_version()
 
@@ -283,15 +278,10 @@ async def read_dashboard(request: Request):
         for item in wl.get("items", []):
             item_copy = item.copy()
             item_copy["requested_by"] = wl["name"]
-            # ON S'ASSURE QUE LE POSTER EST COPIÉ ICI
-            item_copy["poster_path"] = item.get("poster_path")
             item_copy["on_server"] = item.get("on_server", False)
             item_copy["overseerr_id"] = item.get("overseerr_id", False)
             all_items.append(item_copy)
 
-    if all_items:
-        print(f"DEBUG UI | Premier item: {all_items[0]['title']} | OnServer: {all_items[0].get('on_server')} | OvID: {all_items[0].get('overseerr_id')}")
-            
     return templates.TemplateResponse("index.html", {
         "request": request,
         "version": VERSION,
@@ -311,13 +301,11 @@ async def force_sync():
         return {"status": "started"}
     return {"status": "already_running"}
 
-# ROUTE PROXY POUR LES IMAGES (FIX HA INGRESS)
 @app.get("/proxy-image")
 async def proxy_image(url: str = None):
     if not url or url == "None":
         return Response(status_code=400)
     try:
-        # On force un timeout court pour ne pas bloquer l'UI
         r = requests.get(url, headers={"User-Agent": "Watchlisterr/1.0"}, timeout=5)
         return Response(content=r.content, media_type="image/jpeg")
     except Exception as e:
@@ -326,8 +314,8 @@ async def proxy_image(url: str = None):
 
 @app.get("/debug-db")
 async def debug_db(request: Request):
-    users = db.get_all_users()  # Assure-toi que cette méthode existe dans database.py
-    media = db.get_all_media()  # Idem
+    users = db.get_all_users()
+    media = db.get_all_media()
     return templates.TemplateResponse("debug.html", {
         "request": request,
         "users": users,
