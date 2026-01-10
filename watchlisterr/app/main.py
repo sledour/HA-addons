@@ -191,7 +191,8 @@ def run_sync(sync_users=False):
                 logger.info(f"🔎 Recherche TMDB ({item['type']}) pour : {item['title']}")
                 tmdb_res = tmdb_client.search_multi(
                     title=item['title'], 
-                    year=item['year'], 
+                    year=item['year'],
+                    target_id=item.get('tmdb_id'),
                     media_type=item['type'] 
                 )
                 
