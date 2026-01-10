@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Watchlisterr - Debug DB</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white p-8">
+    <div class="max-w-6xl mx-auto">
+        <div class="flex justify-between items-center mb-8">
+            <h1 class="text-3xl font-bold text-indigo-400">Base de Données Interne</h1>
+            <a href="/" class="text-sm bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded">Retour au Dashboard</a>
+        </div>
+
+        <h2 class="text-xl mb-4 text-gray-400 uppercase tracking-wider">Utilisateurs (Mappings)</h2>
+        <div class="overflow-x-auto bg-gray-800 rounded-lg mb-12 shadow-xl">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-gray-700">
+                        <th class="p-4 border-b border-gray-600 text-indigo-300">ID Plex/Overseerr</th>
+                        <th class="p-4 border-b border-gray-600 text-indigo-300">Nom Utilisateur</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for u in users %}
+                    <tr class="hover:bg-gray-750 border-b border-gray-700 transition-colors">
+                        <td class="p-4 font-mono text-pink-400">{{ u.id }}</td>
+                        <td class="p-4 uppercase font-bold text-gray-200">{{ u.username }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <h2 class="text-xl mb-4 text-gray-400 uppercase tracking-wider">Médias mis en Cache</h2>
+        <div class="overflow-x-auto bg-gray-800 rounded-lg shadow-xl border border-gray-700">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-gray-700 text-indigo-300">
+                        <th class="p-4 border-b border-gray-600">TMDB ID</th>
+                        <th class="p-4 border-b border-gray-600">Titre</th>
+                        <th class="p-4 border-b border-gray-600">Type</th>
+                        <th class="p-4 border-b border-gray-600">Année</th>
+                        <th class="p-4 border-b border-gray-600">Poster Path</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for m in media %}
+                    <tr class="hover:bg-gray-700/50 border-b border-gray-800 transition-colors">
+                        <td class="p-4 text-purple-400 font-mono text-xs">{{ m.tmdb_id }}</td>
+                        <td class="p-4 font-bold text-gray-200">{{ m.title }}</td>
+                        <td class="p-4 text-xs uppercase tracking-tighter text-gray-400">{{ m.media_type }}</td>
+                        <td class="p-4 text-gray-500">{{ m.year }}</td>
+                        <td class="p-4 font-mono text-[10px] text-indigo-400/70">{{ m.poster_path }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</body>
+</html>

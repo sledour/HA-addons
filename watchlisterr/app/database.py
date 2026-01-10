@@ -97,3 +97,21 @@ class Database:
                 last_updated DATETIME
             )
         ''')
+        
+    def get_all_users(self):
+        conn = sqlite3.connect(self.db_path)
+        conn.row_factory = sqlite3.Row  # Permet d'accéder aux colonnes par nom
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM users")
+        rows = [dict(row) for row in cursor.fetchall()]
+        conn.close()
+        return rows
+
+    def get_all_media(self):
+        conn = sqlite3.connect(self.db_path)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM media ORDER BY title ASC")
+        rows = [dict(row) for row in cursor.fetchall()]
+        conn.close()
+        return rows

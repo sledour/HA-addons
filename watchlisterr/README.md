@@ -35,5 +35,6 @@ L'application repose sur un backend **FastAPI** qui pilote la logique de synchro
 - [ ] Ajouter une page secrete avec le contenue de la db user et media
 - [ ] Ajouter une chips en haut a gauche des posters (logo plex mini = Dispo / logo Overseerr mini = En cours)
 - [ ] Si dry_run off, pas d'affichage dans l'UI
+- [ ] Ajout d'un filtre (à coté de Watchlist) pour filtrer par users/etat (Plex ou Overseerr) et type (movie/tv)
 - [ ] Stabiliser page web
 - [ ] Activer l'envoi automatique des requêtes (Mode Production).

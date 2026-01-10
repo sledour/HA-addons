@@ -277,5 +277,15 @@ async def proxy_image(url: str = None):
         logger.error(f"❌ Erreur Proxy: {e}")
         return Response(status_code=404)
 
+@app.get("/debug-db")
+async def debug_db(request: Request):
+    users = db.get_all_users()  # Assure-toi que cette méthode existe dans database.py
+    media = db.get_all_media()  # Idem
+    return templates.TemplateResponse("debug.html", {
+        "request": request,
+        "users": users,
+        "media": media
+    })
+
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=1604)
