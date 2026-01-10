@@ -210,21 +210,22 @@ def run_sync(sync_users=False):
                 ov_status_label = ov_data.get('status', 'Inconnu')
                 can_request = ov_data.get('can_request', False)
                 
-                # --- LOG DE DEBUG PRECIS ---
-                # Cela va nous montrer exactement ce qu'Overseerr renvoie
-                logger.info(f"🔍 DEBUG STATUS | {item['title']} | ID:{tmdb_id} | Status_Overseerr: {ov_status_label}")
-                # ---------------------------
+                logger.info(f"🔍 DEBUG STATUS | {item['title']} | Status_Overseerr: {ov_status_label}")
 
-                # Vérification de présence (Codes 4/5 ou textes correspondants)
-                # On s'assure de comparer des strings pour éviter les soucis de types
-                if str(ov_status_label) in ['AVAILABLE', 'PARTIALLY_AVAILABLE', '4', '5']:
+                # --- NORMALISATION POUR LE TEST ---
+                # On transforme tout en texte minuscule et sans espaces inutiles
+                val = str(ov_status_label).strip().lower()
+
+                # Test de présence sur Plex (Status 4, 5 ou textes associés)
+                if val in ['4', '5', 'available', 'partially_available', 'déjà présent sur plex', 'disponible']:
                     on_plex = True
-                    logger.info(f"✅ {item['title']} détecté sur Plex via Overseerr")
+                    logger.info(f"✅ {item['title']} détecté sur Plex")
                 
-                if str(ov_status_label) in ['PENDING', 'PROCESSING', '2', '3']:
+                # Test de demande en cours (Status 2, 3 ou textes associés)
+                if val in ['2', '3', 'pending', 'processing', 'demandé', 'en cours']:
                     ov_id_flag = True
 
-                # Mise à jour forcée en base
+                # SAUVEGARDE EN BASE
                 db.save_media(tmdb_id, item['title'], m_type, item['year'], poster, on_server=(1 if on_plex else 0))
                 
                 # Petit log pour confirmer la détection
