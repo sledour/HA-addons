@@ -15,23 +15,10 @@ class Database:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
                 
-                # --- MIGRATION FORCÉE : VÉRIFICATION DES COLONNES ---
-                
-                # 1. Vérification pour la table MEDIA_CACHE (on_server)
-                try:
-                    cursor.execute("SELECT on_server FROM media_cache LIMIT 1")
-                except sqlite3.OperationalError:
-                    if "no such table" not in str(sys.exc_info()[1]).lower():
-                        logger.warning("⚠️ Ancienne table media_cache détectée. Nettoyage...")
-                        cursor.execute("DROP TABLE IF EXISTS media_cache")
-
-                # 2. Vérification pour la table USERS (plex_id)
-                try:
-                    cursor.execute("SELECT plex_id FROM users LIMIT 1")
-                except sqlite3.OperationalError:
-                    if "no such table" not in str(sys.exc_info()[1]).lower():
-                        logger.warning("⚠️ Ancienne table users détectée. Nettoyage...")
-                        cursor.execute("DROP TABLE IF EXISTS users")
+                # --- LIGNE TEMPORAIRE POUR FORCER LA MISE À JOUR ---
+                # Supprime cette ligne après le prochain redémarrage réussi
+                cursor.execute("DROP TABLE IF EXISTS media_cache")
+                # ---------------------------------------------------
                 
                 # --- CRÉATION DES TABLES PROPRES ---
                 
