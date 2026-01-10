@@ -228,6 +228,7 @@ def run_sync(sync_users=False):
                 tmdb_id = info.get('tmdb_id')
                 m_type = info.get('m_type', item['type'])
                 match = ov_client.get_media_status(tmdb_id, m_type) if tmdb_id else {'status': 'Inconnu', 'can_request': False}
+                on_server = plex_client.find_tmdb_id_on_server(item['title'], item['year'], m_type) is not None
                 
                 items_with_status.append({
                     "title": item['title'], 
@@ -236,6 +237,7 @@ def run_sync(sync_users=False):
                     "tmdb_id": tmdb_id, 
                     "can_request": match.get('can_request', False), 
                     "overseerr_status": match.get('status'),
+                    "on_server": on_server, # Flag pour icône Plex
                     "requested_by": username # Optionnel pour affichage
                 })
             full_report.append({"name": username, "items": items_with_status})
