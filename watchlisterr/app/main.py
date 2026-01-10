@@ -188,12 +188,16 @@ def run_sync(sync_users=False):
                     "poster": cached['poster_path']
                 }
             else:
+                plex_type = item.get('type') 
+                search_type = 'tv' if plex_type in ['show', 'tv'] else 'movie'
+
                 logger.info(f"🔎 Recherche TMDB ({item['type']}) pour : {item['title']}")
                 tmdb_res = tmdb_client.search_multi(
                     title=item['title'], 
                     year=item['year'],
                     target_id=item.get('tmdb_id'),
-                    media_type=item['type'] 
+                    media_type=item['type'],
+                    media_type=search_type
                 )
                 
                 if tmdb_res:
