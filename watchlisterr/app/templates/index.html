@@ -16,7 +16,19 @@
         ::-webkit-scrollbar-track { background: #0B0F1A; }
         ::-webkit-scrollbar-thumb { background: #1F2937; border-radius: 10px; }
         .logo-glow { filter: drop-shadow(0 0 8px rgba(124, 58, 237, 0.4)); transition: all 0.3s ease; }
-        .logo-glow:hover { filter: drop-shadow(0 0 12px rgba(124, 58, 237, 0.7)); transform: scale(1.02); }
+        .logo-glow:hover { filter: drop-shadow(0 0 12px rgba(124, 58, 237, 0.7)); transform: scale(1.02); } 
+        .status-chip {
+            position: absolute;
+            top: 8px;
+            left: 8px; /* J'ai mis à gauche pour ne pas chevaucher le badge Film/Série à droite */
+            z-index: 20;
+            padding: 4px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: transform 0.2s ease;
+        }
+        .status-chip:hover { transform: scale(1.1); }
+        .status-chip img { height: 16px; width: auto; }
     </style>
 </head>
 <body class="text-gray-200 min-h-screen p-4 md:p-8" hx-get="/" hx-trigger="every 30s" hx-select="body" hx-swap="outerHTML">
@@ -81,20 +93,31 @@
     <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
         {% for item in items_to_request %}
         <div class="relative group aspect-[2/3] rounded-xl overflow-hidden border border-gray-800 transition-all hover:border-purple-500 hover:scale-105 shadow-2xl bg-gray-900">
-                {% if item.poster_path and item.poster_path != 'None' %}
-                <img src="proxy-image?url=https://image.tmdb.org/t/p/w500{{ item.poster_path }}" 
-                    alt="{{ item.title }}" 
-                    referrerpolicy="no-referrer"
-                    class="w-full h-full object-cover group-hover:opacity-60 transition-opacity"
-                    onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                <div class="hidden w-full h-full flex-col items-center justify-center p-4 text-center bg-gray-800">
-                    <span class="text-[10px] text-gray-500 uppercase font-bold">{{ item.title }}</span>
+            
+            {% if item.on_server %}
+                <div class="status-chip glass" title="Disponible sur Plex">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/e/e5/Plex_logo_2022.svg" alt="Plex">
                 </div>
-                {% else %}
-                <div class="w-full h-full flex flex-col items-center justify-center p-4 text-center bg-gray-800">
-                    <span class="text-[10px] text-gray-500 uppercase font-bold">{{ item.title }}</span>
+            {% elif item.overseerr_id %}
+                <div class="status-chip glass" title="En cours sur Overseerr">
+                    <img src="https://raw.githubusercontent.com/sct/overseerr/develop/public/logo_full.svg" alt="Overseerr">
                 </div>
-                {% endif %}
+            {% endif %}
+
+            {% if item.poster_path and item.poster_path != 'None' %}
+            <img src="proxy-image?url=https://image.tmdb.org/t/p/w500{{ item.poster_path }}" 
+                alt="{{ item.title }}" 
+                referrerpolicy="no-referrer"
+                class="w-full h-full object-cover group-hover:opacity-60 transition-opacity"
+                onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+            <div class="hidden w-full h-full flex-col items-center justify-center p-4 text-center bg-gray-800">
+                <span class="text-[10px] text-gray-500 uppercase font-bold">{{ item.title }}</span>
+            </div>
+            {% else %}
+            <div class="w-full h-full flex flex-col items-center justify-center p-4 text-center bg-gray-800">
+                <span class="text-[10px] text-gray-500 uppercase font-bold">{{ item.title }}</span>
+            </div>
+            {% endif %}
 
             <div class="absolute inset-0 poster-gradient pointer-events-none"></div>
             
@@ -110,13 +133,9 @@
             </div>
         </div>
         {% else %}
-        <div class="col-span-full py-20 text-center border-2 border-dashed border-gray-800 rounded-2xl">
-            <p class="text-gray-500 italic">Le scan n'a pas encore trouvé de médias.</p>
-        </div>
         {% endfor %}
     </div>
 </main>
-
 <section class="max-w-7xl mx-auto">
     <div class="flex items-center justify-between mb-3 px-1">
         <h2 class="text-xs font-bold uppercase tracking-widest text-gray-500">Live Activity Logs</h2>
@@ -142,6 +161,5 @@
         <div class="animate-pulse inline-block w-2 h-4 bg-green-500 ml-1"></div>
     </div>
 </section>
-
 </body>
 </html>
