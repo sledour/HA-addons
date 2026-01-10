@@ -178,20 +178,18 @@ def run_sync(sync_users=False):
         
         for key, item in unique_items.items():
             cached = db.get_cached_media(item['title'], item['year'])
-            
-            # Normalisation du type pour Overseerr
             raw_type = item.get('type', '').lower()
             m_type = 'tv' if raw_type in ['show', 'tv', 'series', 'season'] else 'movie'
             
             tmdb_id = None
             poster = None
             
-            # Étape A : Récupération ID & Poster
+            # Étape A : On récupère les infos de base (Cache ou TMDB)
             if cached and cached.get('poster_path') and cached['poster_path'] != "None":
                 tmdb_id = cached['tmdb_id']
                 poster = cached['poster_path']
-                m_type = cached['media_type'] # On reprend le type précis du cache
-                logger.info(f"📦 DEBUG DB | {item['title']} chargé depuis cache")
+                m_type = cached['media_type']
+                # logger.info(f"📦 DEBUG DB | {item['title']} chargé depuis cache") # On peut le laisser en debug
             else:
                 logger.info(f"🔎 Recherche TMDB ({m_type}) pour : {item['title']}")
                 tmdb_res = tmdb_client.search_multi(item['title'], item['year'], item.get('tmdb_id'), m_type)
@@ -200,7 +198,7 @@ def run_sync(sync_users=False):
                     poster = tmdb_res['poster_path']
                     m_type = tmdb_res['type']
 
-            # Étape B : Vérification via Overseerr (Statut 4 ou 5 = Sur Plex)
+            # Étape B : VÉRIFICATION SYSTÉMATIQUE DU STATUT (Même si en cache !)
             on_plex = False
             ov_status_label = "Inconnu"
             can_request = False
@@ -212,18 +210,26 @@ def run_sync(sync_users=False):
                 ov_status_label = ov_data.get('status', 'Inconnu')
                 can_request = ov_data.get('can_request', False)
                 
-                # IMPORTANT : Overseerr renvoie des noms de status ou des codes
-                # AVAILABLE (4) ou PARTIALLY_AVAILABLE (5) = Présent sur le disque
-                if ov_status_label in ['AVAILABLE', 'PARTIALLY_AVAILABLE', 4, 5]:
+                # --- LOG DE DEBUG PRECIS ---
+                # Cela va nous montrer exactement ce qu'Overseerr renvoie
+                logger.info(f"🔍 DEBUG STATUS | {item['title']} | ID:{tmdb_id} | Status_Overseerr: {ov_status_label}")
+                # ---------------------------
+
+                # Vérification de présence (Codes 4/5 ou textes correspondants)
+                # On s'assure de comparer des strings pour éviter les soucis de types
+                if str(ov_status_label) in ['AVAILABLE', 'PARTIALLY_AVAILABLE', '4', '5']:
                     on_plex = True
                     logger.info(f"✅ {item['title']} détecté sur Plex via Overseerr")
                 
-                # Si c'est en attente/traitement, on lève le flag pour l'icône Overseerr
-                if ov_status_label in ['PENDING', 'PROCESSING', 2, 3]:
+                if str(ov_status_label) in ['PENDING', 'PROCESSING', '2', '3']:
                     ov_id_flag = True
 
-                # SAUVEGARDE EN BASE AVEC LE NOUVEAU STATUT
+                # Mise à jour forcée en base
                 db.save_media(tmdb_id, item['title'], m_type, item['year'], poster, on_server=(1 if on_plex else 0))
+                
+                # Petit log pour confirmer la détection
+                if on_plex:
+                    logger.info(f"✅ {item['title']} est sur Plex (via Overseerr)")
 
             media_info_map[key] = {
                 "tmdb_id": tmdb_id,
@@ -233,7 +239,7 @@ def run_sync(sync_users=False):
                 "can_request": can_request,
                 "overseerr_status": ov_status_label,
                 "overseerr_id": ov_id_flag
-            }
+            }   
 
         # --- 4. GÉNÉRATION DU RAPPORT POUR L'UI ---
         full_report = []
