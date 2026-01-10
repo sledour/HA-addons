@@ -56,29 +56,30 @@ class TMDBClient:
 
             # Cas 2 : Filtrage intelligent des résultats
             for res in results:
-                # On ignore les résultats qui ne sont pas des films ou séries (ex: personnes)
-                m_type = res.get("media_type") or endpoint.split('/')[-1]
-                if m_type not in ["movie", "tv"]:
-                    continue
-                    
-                # Si on a cherché un type spécifique, on s'assure que le résultat correspond
-                # Note: TMDB renvoie 'tv' même si Plex dit 'show'
-                mapped_type = "tv" if m_type == "show" else m_type
+                # On détermine le type du résultat TMDB
+                res_type = res.get("media_type") or ( "movie" if endpoint == "search/movie" else "tv" )
                 
-                # Si on a une année, on valide la correspondance
+                # --- FILTRE STRICT SUR LE TYPE ---
+                if media_type and res_type != media_type:
+                    continue # Si on cherche une TV et que TMDB renvoie un Movie, on passe au suivant
+                
+                if res_type not in ["movie", "tv"]:
+                    continue
+                        
+                # Si on a une année, on valide
                 if year:
                     res_date = res.get("release_date") or res.get("first_air_date")
                     if res_date and str(year) in res_date:
                         return {
                             "tmdb_id": res.get("id"),
-                            "type": mapped_type,
+                            "type": res_type,
                             "poster_path": res.get("poster_path")
                         }
                 else:
-                    # Si pas d'année, on prend le premier résultat valide
+                    # Sans année, on prend le premier qui correspond au type
                     return {
                         "tmdb_id": res.get("id"),
-                        "type": mapped_type,
+                        "type": res_type,
                         "poster_path": res.get("poster_path")
                     }
                     
