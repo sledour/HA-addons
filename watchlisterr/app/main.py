@@ -188,15 +188,21 @@ def run_sync(sync_users=False):
                     "poster": cached['poster_path']
                 }
             else:
-                plex_type = item.get('type') 
-                search_type = 'tv' if plex_type in ['show', 'tv'] else 'movie'
+                # 1. On détermine le type correct pour TMDB
+                # Plex peut renvoyer 'show', 'season', 'episode' ou 'movie'
+                plex_type = item.get('type', 'movie')
+                if plex_type in ['show', 'tv', 'season', 'episode']:
+                    search_type = 'tv'
+                else:
+                    search_type = 'movie'
 
-                logger.info(f"🔎 Recherche TMDB ({item['type']}) pour : {item['title']}")
+                logger.info(f"🔎 Recherche TMDB ({search_type}) pour : {item['title']}")
+                
                 tmdb_res = tmdb_client.search_multi(
                     title=item['title'], 
                     year=item['year'],
                     target_id=item.get('tmdb_id'),
-                    media_type=search_type
+                    media_type=search_type  # <--- On utilise search_type ici
                 )
                 
                 if tmdb_res:
