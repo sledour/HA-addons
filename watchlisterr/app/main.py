@@ -285,8 +285,13 @@ async def read_dashboard(request: Request):
             item_copy["requested_by"] = wl["name"]
             # ON S'ASSURE QUE LE POSTER EST COPIÉ ICI
             item_copy["poster_path"] = item.get("poster_path")
+            item_copy["on_server"] = item.get("on_server", False)
+            item_copy["overseerr_id"] = item.get("overseerr_id", False)
             all_items.append(item_copy)
 
+    if all_items:
+        print(f"DEBUG UI | Premier item: {all_items[0]['title']} | OnServer: {all_items[0].get('on_server')} | OvID: {all_items[0].get('overseerr_id')}")
+            
     return templates.TemplateResponse("index.html", {
         "request": request,
         "version": VERSION,
