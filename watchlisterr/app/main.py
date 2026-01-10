@@ -179,16 +179,18 @@ def run_sync(sync_users=False):
         for key, item in unique_items.items():
             cached = db.get_cached_media(item['title'], item['year'])
             
-            # On détermine le type pour Overseerr
-            m_type = 'tv' if item.get('type') in ['show', 'tv', 'season', 'episode', 'series'] else 'movie'
+            # Normalisation du type pour Overseerr
+            raw_type = item.get('type', '').lower()
+            m_type = 'tv' if raw_type in ['show', 'tv', 'series', 'season'] else 'movie'
             
-            # Étape A : Récupérer le TMDB ID (soit du cache, soit de TMDB)
             tmdb_id = None
             poster = None
             
+            # Étape A : Récupération ID & Poster
             if cached and cached.get('poster_path') and cached['poster_path'] != "None":
                 tmdb_id = cached['tmdb_id']
                 poster = cached['poster_path']
+                m_type = cached['media_type'] # On reprend le type précis du cache
                 logger.info(f"📦 DEBUG DB | {item['title']} chargé depuis cache")
             else:
                 logger.info(f"🔎 Recherche TMDB ({m_type}) pour : {item['title']}")
@@ -196,31 +198,33 @@ def run_sync(sync_users=False):
                 if tmdb_res:
                     tmdb_id = tmdb_res['tmdb_id']
                     poster = tmdb_res['poster_path']
-                    m_type = tmdb_res['type'] # On affine le type via TMDB
+                    m_type = tmdb_res['type']
 
-            # Étape B : Demander le statut à Overseerr (Lui sait si c'est sur Plex !)
+            # Étape B : Vérification via Overseerr (Statut 4 ou 5 = Sur Plex)
             on_plex = False
             ov_status_label = "Inconnu"
             can_request = False
             ov_id_flag = False
 
             if tmdb_id:
+                # On interroge Overseerr
                 ov_data = ov_client.get_media_status(tmdb_id, m_type)
                 ov_status_label = ov_data.get('status', 'Inconnu')
                 can_request = ov_data.get('can_request', False)
                 
-                # SI STATUS = AVAILABLE (4) ou PARTIALLY_AVAILABLE (5) -> On considère sur Plex
-                if ov_status_label in ['AVAILABLE', 'PARTIALLY_AVAILABLE']:
+                # IMPORTANT : Overseerr renvoie des noms de status ou des codes
+                # AVAILABLE (4) ou PARTIALLY_AVAILABLE (5) = Présent sur le disque
+                if ov_status_label in ['AVAILABLE', 'PARTIALLY_AVAILABLE', 4, 5]:
                     on_plex = True
+                    logger.info(f"✅ {item['title']} détecté sur Plex via Overseerr")
                 
-                # Flag pour l'icône Overseerr (en cours)
-                if ov_status_label in ['PENDING', 'PROCESSING']:
+                # Si c'est en attente/traitement, on lève le flag pour l'icône Overseerr
+                if ov_status_label in ['PENDING', 'PROCESSING', 2, 3]:
                     ov_id_flag = True
 
-                # Mise à jour de la DB avec l'info on_server d'Overseerr
+                # SAUVEGARDE EN BASE AVEC LE NOUVEAU STATUT
                 db.save_media(tmdb_id, item['title'], m_type, item['year'], poster, on_server=(1 if on_plex else 0))
 
-            # Stockage pour le rapport final
             media_info_map[key] = {
                 "tmdb_id": tmdb_id,
                 "m_type": m_type,
@@ -230,29 +234,25 @@ def run_sync(sync_users=False):
                 "overseerr_status": ov_status_label,
                 "overseerr_id": ov_id_flag
             }
-        # --- 4. RÉGÉNÉRATION DU RAPPORT CACHÉ ---
+
+        # --- 4. GÉNÉRATION DU RAPPORT POUR L'UI ---
         full_report = []
         for username, watchlist in user_watchlists.items():
             items_with_status = []
             for item in watchlist:
                 key = f"{item['title']}-{item['year']}".lower()
                 info = media_info_map.get(key, {})
-                tmdb_id = info.get('tmdb_id')
-                m_type = info.get('m_type', item['type'])
-                
-                # Check Overseerr Status
-                match = ov_client.get_media_status(tmdb_id, m_type) if tmdb_id else {'status': 'Inconnu', 'can_request': False}
                 
                 items_with_status.append({
                     "title": item['title'], 
-                    "type": m_type, 
+                    "type": info.get('m_type', item['type']), 
                     "poster_path": info.get('poster'),
-                    "tmdb_id": tmdb_id, 
-                    "can_request": match.get('can_request', False), 
-                    "overseerr_status": match.get('status'),
-                    "overseerr_id": True if match.get('status') in ['PENDING', 'PROCESSING', 'PARTIALLY_AVAILABLE'] else False,
-                    "on_server": info.get('on_server', False),
-                    "requested_by": username
+                    "tmdb_id": info.get('tmdb_id'), 
+                    "can_request": info.get('can_request', False), 
+                    "overseerr_status": info.get('overseerr_status', 'Inconnu'),
+                    "overseerr_id": info.get('overseerr_id', False), # Flag icône Overseerr
+                    "on_server": info.get('on_server', False),       # Flag icône Plex
+                    "requested_by": username 
                 })
             full_report.append({"name": username, "items": items_with_status})
 
