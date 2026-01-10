@@ -68,21 +68,31 @@ class Database:
             return res[0] if res else None
 
     def get_cached_media(self, title, year):
-        with self._get_connection() as conn:
-            conn.row_factory = sqlite3.Row
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM media_cache WHERE title = ? AND year = ?", (title, year))
-            res = cursor.fetchone()
-            return dict(res) if res else None
-
+        conn = sqlite3.connect(self.db_path)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        
+        # On utilise LOWER pour ignorer la casse et CAST pour être sûr de l'année
+        query = "SELECT * FROM media WHERE LOWER(title) = LOWER(?) AND CAST(year AS TEXT) = CAST(? AS TEXT)"
+        cursor.execute(query, (title, year))
+        
+        row = cursor.fetchone()
+        conn.close()
+        
+        if row:
+            return dict(row)
+        return None
+    
     def save_media(self, tmdb_id, title, media_type, year, poster_path):
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
-        cursor.execute('''
+        # INSERT OR REPLACE permet de mettre à jour le poster si le film existe déjà
+        query = """
             INSERT OR REPLACE INTO media (tmdb_id, title, media_type, year, poster_path)
             VALUES (?, ?, ?, ?, ?)
-        ''', (tmdb_id, title, media_type, year, poster_path))
-        conn.commit() # <--- TRÈS IMPORTANT
+        """
+        cursor.execute(query, (tmdb_id, title, media_type, year, poster_path))
+        conn.commit()
         conn.close()
 
     def setup_db(self):
@@ -97,7 +107,7 @@ class Database:
                 last_updated DATETIME
             )
         ''')
-        
+
     def get_all_users(self):
         conn = sqlite3.connect(self.db_path)
         conn.row_factory = sqlite3.Row  # Permet d'accéder aux colonnes par nom

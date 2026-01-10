@@ -136,6 +136,7 @@ def run_sync(sync_users=False):
         plex_client = PlexClient(opts.get('plex_token'), opts.get('plex_url'))
         tmdb_client = TMDBClient(opts.get('tmdb_api_key'))
         
+        # --- 1. MAPPING UTILISATEURS ---
         if sync_users:
             logger.info("👥 Synchronisation des mappings utilisateurs...")
             plex_users = []
@@ -158,53 +159,77 @@ def run_sync(sync_users=False):
         users_to_process = []
         if my_profile: users_to_process.append({"plex_id": None, "username": my_profile['username']})
         for f in friends: users_to_process.append({"plex_id": f['plex_id'], "username": f['username']})
-        
-        full_report = []
-        total_items = 0
+       
+        # --- 2. EXTRACTION DES MÉDIAS UNIQUES ---
+        # On regroupe par titre+année pour ne pas appeler TMDB 10 fois pour le même film
+        unique_items = {}
+        user_watchlists = {} # Pour reconstruire le rapport final
+
         for user in users_to_process:
             watchlist = plex_client.get_watchlist(user['plex_id'])
             logger.info(f"👤 Traitement de : {user['username']} ({len(watchlist)} médias)")
+            user_watchlists[user['username']] = watchlist
+            for item in watchlist:
+                key = f"{item['title']}-{item['year']}".lower()
+                if key not in unique_items:
+                    unique_items[key] = item
+
+        # --- 3. TRAITEMENT DES MÉDIAS (CACHE OU TMDB) ---
+        media_info_map = {} # Stocke les résultats (tmdb_id, poster, etc.)
+        
+        for key, item in unique_items.items():
+            cached = db.get_cached_media(item['title'], item['year'])
+            
+            if cached and cached.get('poster_path') and cached['poster_path'] != "None":
+                logger.info(f"📦 DEBUG DB | {item['title']} chargé depuis cache")
+                media_info_map[key] = {
+                    "tmdb_id": cached['tmdb_id'],
+                    "m_type": cached['media_type'],
+                    "poster": cached['poster_path']
+                }
+            else:
+                logger.info(f"🔎 Recherche TMDB pour : {item['title']}")
+                tmdb_res = tmdb_client.search_multi(item['title'], item['year'])
+                
+                if tmdb_res:
+                    db.save_media(tmdb_res['tmdb_id'], item['title'], tmdb_res['type'], item['year'], tmdb_res['poster_path'])
+                    logger.info(f"✅ Mis en cache : {item['title']}")
+                    media_info_map[key] = {
+                        "tmdb_id": tmdb_res['tmdb_id'],
+                        "m_type": tmdb_res['type'],
+                        "poster": tmdb_res['poster_path']
+                    }
+                else:
+                    media_info_map[key] = {"tmdb_id": None, "m_type": item['type'], "poster": None}
+
+        # --- 4. RÉGÉNÉRATION DU RAPPORT CACHÉ ---
+        full_report = []
+        for username, watchlist in user_watchlists.items():
             items_with_status = []
             for item in watchlist:
-                total_items += 1
-                tmdb_id, m_type, poster = None, item['type'], None
-                cached = db.get_cached_media(item['title'], item['year'])
+                key = f"{item['title']}-{item['year']}".lower()
+                info = media_info_map.get(key, {})
                 
-                # 2. Si le film est en DB MAIS que le poster est vide, on force un refresh TMDB
-                if cached and cached.get('poster_path'):
-                    tmdb_id = cached['tmdb_id']
-                    m_type = cached['media_type']
-                    poster = cached['poster_path']
-                    logger.info(f"DEBUG DB | {item['title']} chargé depuis cache")
-                else:
-                    logger.info(f"🔎 Recherche TMDB pour : {item['title']}")
-                    tmdb_res = tmdb_client.search_multi(
-                        title=item['title'], 
-                        year=item['year'], 
-                        target_id=item.get('tmdb_id') # Passe l'ID ici si tu l'as
-                    )
-                    
-                    if tmdb_res:
-                        # ICI : On assigne les variables pour qu'elles soient utilisées immédiatement
-                        tmdb_id = tmdb_res['tmdb_id']
-                        m_type = tmdb_res['type']
-                        poster = tmdb_res.get('poster_path')
-                        
-                        db.save_media(tmdb_id, item['title'], m_type, item['year'], poster)
-                        logger.info(f"✅ Mis en cache : {item['title']} (Poster: {poster})")
-                
+                # Check Overseerr Status
+                tmdb_id = info.get('tmdb_id')
+                m_type = info.get('m_type', item['type'])
                 match = ov_client.get_media_status(tmdb_id, m_type) if tmdb_id else {'status': 'Inconnu', 'can_request': False}
                 
                 items_with_status.append({
-                    "title": item['title'], "type": m_type, "poster_path": poster,
-                    "tmdb_id": tmdb_id, "can_request": match.get('can_request', False), 
-                    "overseerr_status": match.get('status')
+                    "title": item['title'], 
+                    "type": m_type, 
+                    "poster_path": info.get('poster'),
+                    "tmdb_id": tmdb_id, 
+                    "can_request": match.get('can_request', False), 
+                    "overseerr_status": match.get('status'),
+                    "requested_by": username # Optionnel pour affichage
                 })
-            full_report.append({"name": user['username'], "items": items_with_status})
+            full_report.append({"name": username, "items": items_with_status})
 
         CACHE["plex_watchlists"] = full_report
         CACHE["last_update"] = datetime.now().strftime("%H:%M:%S")
-        logger.info(f"✅ Scan terminé. {total_items} médias analysés.")
+        logger.info(f"✅ Scan terminé. {len(unique_items)} médias uniques traités.")
+
     except Exception as e:
         logger.error(f"❌ Erreur pendant run_sync: {e}")
     finally:
