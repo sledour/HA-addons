@@ -196,7 +196,6 @@ def run_sync(sync_users=False):
                     title=item['title'], 
                     year=item['year'],
                     target_id=item.get('tmdb_id'),
-                    media_type=item['type'],
                     media_type=search_type
                 )
                 
