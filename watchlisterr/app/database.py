@@ -13,15 +13,7 @@ class Database:
     def create_tables(self):
         try:
             with sqlite3.connect(self.db_path) as conn:
-                cursor = conn.cursor()
-                
-                # --- LIGNE TEMPORAIRE POUR FORCER LA MISE À JOUR ---
-                # Supprime cette ligne après le prochain redémarrage réussi
-                cursor.execute("DROP TABLE IF EXISTS media_cache")
-                # ---------------------------------------------------
-                
-                # --- CRÉATION DES TABLES PROPRES ---
-                
+                cursor = conn.cursor()              
                 # Table des utilisateurs
                 cursor.execute('''
                     CREATE TABLE IF NOT EXISTS users (

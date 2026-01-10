@@ -9,8 +9,9 @@
     <div class="max-w-6xl mx-auto">
         <div class="flex justify-between items-center mb-8">
             <h1 class="text-3xl font-bold text-indigo-400">Base de Données Interne</h1>
-            <a href="/" class="text-sm bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded">Retour au Dashboard</a>
+            <a href="/" class="text-sm bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded transition-colors">Retour au Dashboard</a>
         </div>
+
         <div class="flex justify-end mb-6">
             <button 
                 onclick="confirmClear()"
@@ -20,19 +21,23 @@
         </div>
 
         <h2 class="text-xl mb-4 text-gray-400 uppercase tracking-wider">Utilisateurs (Mappings)</h2>
-        <div class="overflow-x-auto bg-gray-800 rounded-lg mb-12 shadow-xl">
+        <div class="overflow-x-auto bg-gray-800 rounded-lg mb-12 shadow-xl border border-gray-700">
             <table class="w-full text-left border-collapse">
                 <thead>
-                    <tr class="bg-gray-700">
-                        <th class="p-4 border-b border-gray-600 text-indigo-300">ID Plex/Overseerr</th>
-                        <th class="p-4 border-b border-gray-600 text-indigo-300">Nom Utilisateur</th>
+                    <tr class="bg-gray-700 text-indigo-300">
+                        <th class="p-4 border-b border-gray-600">ID Plex</th>
+                        <th class="p-4 border-b border-gray-600">ID Overseerr</th>
+                        <th class="p-4 border-b border-gray-600">Nom Utilisateur</th>
+                        <th class="p-4 border-b border-gray-600">Rôle</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for u in users %}
                     <tr class="hover:bg-gray-750 border-b border-gray-700 transition-colors">
-                        <td class="p-4 font-mono text-pink-400">{{ u.id }}</td>
+                        <td class="p-4 font-mono text-pink-400 text-xs">{{ u.plex_id }}</td>
+                        <td class="p-4 font-mono text-cyan-400 text-xs">{{ u.overseerr_id }}</td>
                         <td class="p-4 uppercase font-bold text-gray-200">{{ u.username }}</td>
+                        <td class="p-4 text-xs text-gray-400">{{ u.role }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -48,6 +53,7 @@
                         <th class="p-4 border-b border-gray-600">Titre</th>
                         <th class="p-4 border-b border-gray-600">Type</th>
                         <th class="p-4 border-b border-gray-600">Année</th>
+                        <th class="p-4 border-b border-gray-600 text-center">Sur Plex ?</th>
                         <th class="p-4 border-b border-gray-600">Poster Path</th>
                     </tr>
                 </thead>
@@ -58,6 +64,13 @@
                         <td class="p-4 font-bold text-gray-200">{{ m.title }}</td>
                         <td class="p-4 text-xs uppercase tracking-tighter text-gray-400">{{ m.media_type }}</td>
                         <td class="p-4 text-gray-500">{{ m.year }}</td>
+                        <td class="p-4 text-center">
+                            {% if m.on_server == 1 %}
+                                <span class="px-2 py-1 rounded bg-amber-500/20 text-amber-500 border border-amber-500/50 text-[10px] font-bold">OUI (PLEX)</span>
+                            {% else %}
+                                <span class="px-2 py-1 rounded bg-gray-700 text-gray-500 text-[10px] font-bold">NON</span>
+                            {% endif %}
+                        </td>
                         <td class="p-4 font-mono text-[10px] text-indigo-400/70">{{ m.poster_path }}</td>
                     </tr>
                     {% endfor %}
