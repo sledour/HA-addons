@@ -188,8 +188,12 @@ def run_sync(sync_users=False):
                     "poster": cached['poster_path']
                 }
             else:
-                logger.info(f"🔎 Recherche TMDB pour : {item['title']}")
-                tmdb_res = tmdb_client.search_multi(item['title'], item['year'])
+                logger.info(f"🔎 Recherche TMDB ({item['type']}) pour : {item['title']}")
+                tmdb_res = tmdb_client.search_multi(
+                    title=item['title'], 
+                    year=item['year'], 
+                    media_type=item['type'] 
+                )
                 
                 if tmdb_res:
                     db.save_media(tmdb_res['tmdb_id'], item['title'], tmdb_res['type'], item['year'], tmdb_res['poster_path'])
@@ -311,6 +315,15 @@ async def debug_db(request: Request):
         "users": users,
         "media": media
     })
+
+@app.post("/clear-db")
+async def clear_db():
+    try:
+        db.clear_tables()
+        logger.warning("🧹 Base de données vidée par l'utilisateur")
+        return {"status": "success", "message": "Base de données vidée."}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=1604)

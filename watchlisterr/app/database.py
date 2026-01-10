@@ -125,3 +125,11 @@ class Database:
         rows = [dict(row) for row in cursor.fetchall()]
         conn.close()
         return rows
+    
+    def clear_tables(self):
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM media")
+        cursor.execute("DELETE FROM users")
+        conn.commit()
+        conn.close()

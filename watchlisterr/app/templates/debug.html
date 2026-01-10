@@ -11,6 +11,13 @@
             <h1 class="text-3xl font-bold text-indigo-400">Base de Données Interne</h1>
             <a href="/" class="text-sm bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded">Retour au Dashboard</a>
         </div>
+        <div class="flex justify-end mb-6">
+            <button 
+                onclick="confirmClear()"
+                class="px-4 py-2 bg-red-900/30 hover:bg-red-600 border border-red-800 text-red-200 text-xs font-bold uppercase rounded-lg transition-all">
+                🗑️ Vider le Cache & Users
+            </button>
+        </div>
 
         <h2 class="text-xl mb-4 text-gray-400 uppercase tracking-wider">Utilisateurs (Mappings)</h2>
         <div class="overflow-x-auto bg-gray-800 rounded-lg mb-12 shadow-xl">
@@ -59,4 +66,16 @@
         </div>
     </div>
 </body>
+<script>
+function confirmClear() {
+    if (confirm("Es-tu sûr de vouloir vider TOUTE la base de données ?")) {
+        fetch('/clear-db', { method: 'POST' })
+            .then(res => res.json())
+            .then(data => {
+                alert(data.message);
+                window.location.reload();
+            });
+    }
+}
+</script>
 </html>
