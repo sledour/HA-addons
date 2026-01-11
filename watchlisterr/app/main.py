@@ -15,6 +15,7 @@ from plex_api import PlexClient
 from tmdb_api import TMDBClient
 from database import Database
 
+
 # --- CONFIGURATION LOGS (MATRIX STYLE) ---
 LOG_HISTORY = collections.deque(maxlen=20)
 
