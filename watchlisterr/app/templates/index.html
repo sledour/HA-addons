@@ -30,7 +30,6 @@
         .status-chip:hover { transform: scale(1.1); }
         .status-chip img { height: 16px; width: auto; }
         
-        /* Style pour les selects de filtrage */
         .filter-select {
             background-color: rgba(31, 41, 55, 0.5);
             border: 1px solid rgba(75, 85, 99, 0.4);
@@ -49,166 +48,149 @@
         .filter-select:focus { border-color: #7C3AED; outline: none; box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.5); }
     </style>
 </head>
-<body class="text-gray-200 min-h-screen p-4 md:p-8" hx-get="/" hx-trigger="every 30s" hx-select="body" hx-swap="outerHTML">
+<body class="text-gray-200 min-h-screen p-4 md:p-8">
 
-<header class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4 mb-10 p-4 bg-gray-900/50 rounded-2xl border border-gray-800">
- <div class="flex items-center gap-6">
-        <div class="flex items-center gap-3">
-            <img src="static/logo.png" alt="Logo" class="h-10 w-auto logo-glow">
-            <span class="text-[10px] font-mono text-gray-600 self-end mb-1">{{ version }}</span>
+<div hx-get="/" hx-trigger="every 30s" hx-select="#refresh-zone" hx-target="#refresh-zone" hx-swap="outerHTML" style="display:none;"></div>
+
+<div id="refresh-zone">
+    <header class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4 mb-10 p-4 bg-gray-900/50 rounded-2xl border border-gray-800">
+        <div class="flex items-center gap-6">
+            <div class="flex items-center gap-3">
+                <img src="static/logo.png" alt="Logo" class="h-10 w-auto logo-glow">
+                <span class="text-[10px] font-mono text-gray-600 self-end mb-1">{{ version }}</span>
+            </div>
+            
+            <div class="flex gap-3">
+                <span class="flex items-center gap-2 px-3 py-1 bg-gray-800 rounded-full text-xs font-medium border border-gray-700" title="{{ api_status.plex }}">
+                    <span class="w-2 h-2 rounded-full {% if '✅' in api_status.plex %}bg-green-500 shadow-[0_0_8px_#22c55e]{% else %}bg-red-500 shadow-[0_0_8px_#ef4444]{% endif %}"></span> 
+                    Plex
+                </span>
+                <span class="flex items-center gap-2 px-3 py-1 bg-gray-800 rounded-full text-xs font-medium border border-gray-700" title="{{ api_status.overseerr }}">
+                    <span class="w-2 h-2 rounded-full {% if '✅' in api_status.overseerr %}bg-green-500 shadow-[0_0_8px_#22c55e]{% else %}bg-red-500 shadow-[0_0_8px_#ef4444]{% endif %}"></span> 
+                    Overseerr
+                </span>
+                <span class="flex items-center gap-2 px-3 py-1 bg-gray-800 rounded-full text-xs font-medium border border-gray-700" title="{{ api_status.tmdb }}">
+                    <span class="w-2 h-2 rounded-full {% if '✅' in api_status.tmdb %}bg-green-500 shadow-[0_0_8px_#22c55e]{% else %}bg-red-500 shadow-[0_0_8px_#ef4444]{% endif %}"></span> 
+                    TMDB
+                </span>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-6">
+        {% if dry_run %}
+            <div title="Mode Simulation" class="flex items-center gap-3 bg-gray-800/30 px-4 py-2 rounded-xl border border-gray-800 cursor-help transition-all">
+                <span class="text-xs font-bold uppercase tracking-wider text-gray-500">Dry Run</span>
+                <div class="flex items-center gap-2">
+                        <span class="flex h-2 w-2 rounded-full bg-indigo-500 shadow-[0_0_8px_#6366f1]"></span>
+                        <span class="text-[10px] font-bold text-indigo-400 uppercase">Actif</span>
+                </div>
+            </div>
+        {% endif %}
+            <button hx-get="/sync" hx-swap="none" class="px-5 py-2 bg-purple-600 hover:bg-purple-700 rounded-xl font-bold transition-all flex items-center gap-2 active:scale-95 disabled:opacity-50" {% if is_scanning %}disabled{% endif %}>
+                <span>Sync Now</span>
+                <svg class="w-4 h-4 {% if is_scanning %}animate-spin{% endif %}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                </svg>
+            </button>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto mb-10">
+        <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+            <h2 class="text-lg font-semibold flex items-center gap-2">
+                🔍 Watchlists <span class="text-gray-500 font-normal">({{ items_to_request|length }})</span>
+            </h2>
+            
+            <div class="flex flex-wrap items-center gap-3">
+                <select id="filterUser" onchange="applyFilters()" class="filter-select">
+                    <option value="all">Utilisateurs (Tous)</option>
+                    {% set users = [] %}
+                    {% for item in items_to_request %}
+                        {% if item.requested_by not in users %}
+                            {% set _ = users.append(item.requested_by) %}
+                            <option value="{{ item.requested_by }}">{{ item.requested_by }}</option>
+                        {% endif %}
+                    {% endfor %}
+                </select>
+
+                <select id="filterType" onchange="applyFilters()" class="filter-select">
+                    <option value="all">Type (Tous)</option>
+                    <option value="movie">🎬 Films</option>
+                    <option value="tv">📺 Séries</option>
+                </select>
+
+                <select id="filterStatus" onchange="applyFilters()" class="filter-select">
+                    <option value="all">Statut (Tous)</option>
+                    <option value="plex">✅ Sur Plex</option>
+                    <option value="overseerr">⏳ Sur Overseerr</option>
+                    <option value="none">❌ Non Demandés</option>
+                </select>
+            </div>
         </div>
         
-        <div class="flex gap-3">
-            <span class="flex items-center gap-2 px-3 py-1 bg-gray-800 rounded-full text-xs font-medium border border-gray-700" title="{{ api_status.plex }}">
-                <span class="w-2 h-2 rounded-full {% if '✅' in api_status.plex %}bg-green-500 shadow-[0_0_8px_#22c55e]{% else %}bg-red-500 shadow-[0_0_8px_#ef4444]{% endif %}"></span> 
-                Plex
-            </span>
+        <div id="mediaGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
+            {% for item in items_to_request %}
+            <div class="media-card relative group aspect-[2/3] rounded-xl overflow-hidden border border-gray-800 transition-all hover:border-purple-500 hover:scale-105 shadow-2xl bg-gray-900"
+                 data-user="{{ item.requested_by }}"
+                 data-type="{{ item.type }}"
+                 data-onplex="{{ 'true' if item.on_server else 'false' }}"
+                 data-onoverseerr="{{ 'true' if item.overseerr_id else 'false' }}">
+                
+                {% if item.on_server %}
+                    <div class="status-chip glass" title="Disponible sur Plex">
+                        <img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/plex-alt-light.png" alt="Plex">
+                    </div>
+                {% elif item.overseerr_id %}
+                    <div class="status-chip glass" title="En cours sur Overseerr">
+                        <img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/overseerr.png" alt="Overseerr">
+                    </div>
+                {% endif %}
 
-            <span class="flex items-center gap-2 px-3 py-1 bg-gray-800 rounded-full text-xs font-medium border border-gray-700" title="{{ api_status.overseerr }}">
-                <span class="w-2 h-2 rounded-full {% if '✅' in api_status.overseerr %}bg-green-500 shadow-[0_0_8px_#22c55e]{% else %}bg-red-500 shadow-[0_0_8px_#ef4444]{% endif %}"></span> 
-                Overseerr
-            </span>
-
-            <span class="flex items-center gap-2 px-3 py-1 bg-gray-800 rounded-full text-xs font-medium border border-gray-700" title="{{ api_status.tmdb }}">
-                <span class="w-2 h-2 rounded-full {% if '✅' in api_status.tmdb %}bg-green-500 shadow-[0_0_8px_#22c55e]{% else %}bg-red-500 shadow-[0_0_8px_#ef4444]{% endif %}"></span> 
-                TMDB
-            </span>
-        </div>
-    </div>
-
-    <div class="flex items-center gap-6">
-    {% if dry_run %}
-        <div title="Mode Simulation : Les requêtes ne sont pas envoyées à Overseerr."
-            class="flex items-center gap-3 bg-gray-800/30 px-4 py-2 rounded-xl border border-gray-800 cursor-help transition-all">
-            <span class="text-xs font-bold uppercase tracking-wider text-gray-500">Dry Run</span>
-            <div class="flex items-center gap-2">
-                    <span class="flex h-2 w-2 rounded-full bg-indigo-500 shadow-[0_0_8px_#6366f1]"></span>
-                    <span class="text-[10px] font-bold text-indigo-400 uppercase">Actif</span>
-            </div>
-        </div>
-     {% endif %}
-        <button hx-get="/sync" 
-                hx-swap="none"
-                class="px-5 py-2 bg-purple-600 hover:bg-purple-700 rounded-xl font-bold transition-all flex items-center gap-2 active:scale-95 disabled:opacity-50"
-                {% if is_scanning %}disabled{% endif %}>
-            <span>Sync Now</span>
-            <svg class="w-4 h-4 {% if is_scanning %}animate-spin{% endif %}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-            </svg>
-        </button>
-    </div>
-</header>
-
-<main class="max-w-7xl mx-auto mb-10">
-    <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
-        <h2 class="text-lg font-semibold flex items-center gap-2">
-            🔍 Watchlists <span class="text-gray-500 font-normal">({{ items_to_request|length }})</span>
-        </h2>
-        
-        <div class="flex flex-wrap items-center gap-3">
-            <select id="filterUser" onchange="applyFilters()" class="filter-select">
-                <option value="all">Utilisateurs (Tous)</option>
-                {% set users = [] %}
-                {% for item in items_to_request %}
-                    {% if item.requested_by not in users %}
-                        {% set _ = users.append(item.requested_by) %}
-                        <option value="{{ item.requested_by }}">{{ item.requested_by }}</option>
-                    {% endif %}
-                {% endfor %}
-            </select>
-
-            <select id="filterType" onchange="applyFilters()" class="filter-select">
-                <option value="all">Type (Tous)</option>
-                <option value="movie">🎬 Films</option>
-                <option value="tv">📺 Séries</option>
-            </select>
-
-            <select id="filterStatus" onchange="applyFilters()" class="filter-select">
-                <option value="all">Statut (Tous)</option>
-                <option value="plex">✅ Sur Plex</option>
-                <option value="overseerr">⏳ Sur Overseerr</option>
-                <option value="none">❌ Non Demandés</option>
-            </select>
-        </div>
-    </div>
-    
-    <div id="mediaGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
-        {% for item in items_to_request %}
-        <div class="media-card relative group aspect-[2/3] rounded-xl overflow-hidden border border-gray-800 transition-all hover:border-purple-500 hover:scale-105 shadow-2xl bg-gray-900"
-             data-user="{{ item.requested_by }}"
-             data-type="{{ item.type }}"
-             data-onplex="{{ 'true' if item.on_server else 'false' }}"
-             data-onoverseerr="{{ 'true' if item.overseerr_id else 'false' }}">
-            
-            {% if item.on_server %}
-                <div class="status-chip glass" title="Disponible sur Plex">
-                    <img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/plex-alt-light.png" alt="Plex">
+                {% if item.poster_path and item.poster_path != 'None' %}
+                <img src="proxy-image?url=https://image.tmdb.org/t/p/w500{{ item.poster_path }}" alt="{{ item.title }}" referrerpolicy="no-referrer" class="w-full h-full object-cover group-hover:opacity-60 transition-opacity" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                {% endif %}
+                <div class="absolute inset-0 poster-gradient pointer-events-none"></div>
+                
+                <div class="absolute bottom-3 left-3 px-2 py-1 glass rounded-md flex items-center gap-1.5 pointer-events-none">
+                    <div class="w-4 h-4 bg-purple-500 rounded-sm flex items-center justify-center text-[10px] font-bold text-white">
+                        {{ item.requested_by[0]|upper if item.requested_by else '?' }}
+                    </div>
+                    <span class="text-[10px] font-medium text-white truncate max-w-[80px]">{{ item.requested_by }}</span>
                 </div>
-            {% elif item.overseerr_id %}
-                <div class="status-chip glass" title="En cours sur Overseerr">
-                    <img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/overseerr.png" alt="Overseerr">
+
+                <div class="absolute top-3 right-3 px-2 py-1 glass rounded-md text-[10px] font-bold text-white uppercase tracking-tighter pointer-events-none">
+                    {% if item.type == 'movie' %} 🎬 Film {% else %} 📺 Série {% endif %}
                 </div>
-            {% endif %}
-
-            {% if item.poster_path and item.poster_path != 'None' %}
-            <img src="proxy-image?url=https://image.tmdb.org/t/p/w500{{ item.poster_path }}" 
-                alt="{{ item.title }}" 
-                referrerpolicy="no-referrer"
-                class="w-full h-full object-cover group-hover:opacity-60 transition-opacity"
-                onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-            <div class="hidden w-full h-full flex-col items-center justify-center p-4 text-center bg-gray-800">
-                <span class="text-[10px] text-gray-500 uppercase font-bold">{{ item.title }}</span>
             </div>
-            {% else %}
-            <div class="w-full h-full flex flex-col items-center justify-center p-4 text-center bg-gray-800">
-                <span class="text-[10px] text-gray-500 uppercase font-bold">{{ item.title }}</span>
-            </div>
-            {% endif %}
-
-            <div class="absolute inset-0 poster-gradient pointer-events-none"></div>
-            
-            <div class="absolute bottom-3 left-3 px-2 py-1 glass rounded-md flex items-center gap-1.5 pointer-events-none">
-                <div class="w-4 h-4 bg-purple-500 rounded-sm flex items-center justify-center text-[10px] font-bold text-white">
-                    {{ item.requested_by[0]|upper if item.requested_by else '?' }}
-                </div>
-                <span class="text-[10px] font-medium text-white truncate max-w-[80px]">{{ item.requested_by }}</span>
-            </div>
-
-            <div class="absolute top-3 right-3 px-2 py-1 glass rounded-md text-[10px] font-bold text-white uppercase tracking-tighter pointer-events-none">
-                {% if item.type == 'movie' %} 🎬 Film {% else %} 📺 Série {% endif %}
-            </div>
+            {% endfor %}
         </div>
-        {% endfor %}
-    </div>
-</main>
+    </main>
 
-<section class="max-w-7xl mx-auto">
-    <div class="flex items-center justify-between mb-3 px-1">
-        <h2 class="text-xs font-bold uppercase tracking-widest text-gray-500">Live Activity Logs</h2>
-        <a href="/debug-db" class="flex items-center gap-2 px-3 py-1 bg-gray-800/50 hover:bg-purple-900/40 border border-gray-700 rounded-full transition-all group">
-            <span class="relative flex h-2 w-2">
-                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
-                <span class="relative inline-flex rounded-full h-2 w-2 bg-purple-500"></span>
-            </span>
-            <span class="text-[10px] font-mono text-purple-400 group-hover:text-purple-200 uppercase tracking-tighter">
-                Cycle: #{{ cycle }}
-            </span>
-        </a>
-    </div>
-    <div class="matrix-bg border border-gray-800 rounded-xl p-4 h-64 overflow-y-auto font-mono text-sm shadow-inner">
-        {% for log in logs %}
-        <div class="mb-1">
-            <span class="text-gray-600">[{{ log.time }}]</span>
-            <span class="{% if 'INFO' in log.msg %}text-green-500{% elif 'SUCCESS' in log.msg %}text-white{% elif 'WARNING' in log.msg %}text-orange-400{% elif 'ERROR' in log.msg %}text-red-500 bg-black px-1 border border-red-900{% endif %}">
-                {{ log.msg }}
-            </span>
+    <section class="max-w-7xl mx-auto pb-10">
+        <div class="flex items-center justify-between mb-3 px-1">
+            <h2 class="text-xs font-bold uppercase tracking-widest text-gray-500">Live Activity Logs</h2>
+            <a href="/debug-db" class="flex items-center gap-2 px-3 py-1 bg-gray-800/50 hover:bg-purple-900/40 border border-gray-700 rounded-full transition-all group">
+                <span class="relative flex h-2 w-2">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2 w-2 bg-purple-500"></span>
+                </span>
+                <span class="text-[10px] font-mono text-purple-400 group-hover:text-purple-200 uppercase tracking-tighter">Cycle: #{{ cycle }}</span>
+            </a>
         </div>
-        {% endfor %}
-        <div class="animate-pulse inline-block w-2 h-4 bg-green-500 ml-1"></div>
-    </div>
-</section>
+        <div class="matrix-bg border border-gray-800 rounded-xl p-4 h-64 overflow-y-auto font-mono text-sm shadow-inner">
+            {% for log in logs %}
+            <div class="mb-1">
+                <span class="text-gray-600">[{{ log.time }}]</span>
+                <span class="{% if 'INFO' in log.msg %}text-green-500{% elif 'SUCCESS' in log.msg %}text-white{% elif 'WARNING' in log.msg %}text-orange-400{% elif 'ERROR' in log.msg %}text-red-500 bg-black px-1 border border-red-900{% endif %}">{{ log.msg }}</span>
+            </div>
+            {% endfor %}
+            <div class="animate-pulse inline-block w-2 h-4 bg-green-500 ml-1"></div>
+        </div>
+    </section>
+</div>
 
 <script>
+    // Applique les filtres visuels sur les cartes
     function applyFilters() {
         const user = document.getElementById('filterUser').value;
         const type = document.getElementById('filterType').value;
@@ -222,26 +204,34 @@
             const onOverseerr = card.getAttribute('data-onoverseerr') === 'true';
 
             let show = true;
-
-            // Filtre Utilisateur
             if (user !== 'all' && cardUser !== user) show = false;
-
-            // Filtre Type
             if (type !== 'all' && cardType !== type) show = false;
-
-            // Filtre Statut
             if (status === 'plex' && !onPlex) show = false;
             if (status === 'overseerr' && !onOverseerr) show = false;
             if (status === 'none' && (onPlex || onOverseerr)) show = false;
 
-            // Application visuelle
             card.style.display = show ? 'block' : 'none';
         });
     }
 
-    // Initialisation après swap HTMX
+    // Capture et restaure les valeurs des filtres après le rafraîchissement HTMX
+    let filterStates = { user: 'all', type: 'all', status: 'all' };
+
+    document.body.addEventListener('htmx:beforeRequest', function() {
+        filterStates.user = document.getElementById('filterUser').value;
+        filterStates.type = document.getElementById('filterType').value;
+        filterStates.status = document.getElementById('filterStatus').value;
+    });
+
     document.body.addEventListener('htmx:afterSwap', function(evt) {
-        applyFilters();
+        if (evt.detail.target.id === "refresh-zone") {
+            // Restauration des sélections
+            document.getElementById('filterUser').value = filterStates.user;
+            document.getElementById('filterType').value = filterStates.type;
+            document.getElementById('filterStatus').value = filterStates.status;
+            // Ré-application du filtrage
+            applyFilters();
+        }
     });
 </script>
 
