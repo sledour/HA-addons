@@ -138,11 +138,11 @@
                  data-onplex="{{ 'true' if item.on_server else 'false' }}"
                  data-onoverseerr="{{ 'true' if item.overseerr_id else 'false' }}">
                 
-                {% if item.on_server %}
+                {% if item.on_server == 1 %}
                     <div class="status-chip glass" title="Disponible sur Plex">
                         <img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/plex-alt-light.png" alt="Plex">
                     </div>
-                {% elif item.overseerr_id %}
+                {% elif item.on_server == 2 %}
                     <div class="status-chip glass" title="En cours sur Overseerr">
                         <img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/overseerr.png" alt="Overseerr">
                     </div>

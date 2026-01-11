@@ -204,6 +204,7 @@ def run_sync(sync_users=False):
             ov_status_label = "Inconnu"
             can_request = False
             ov_id_flag = False
+            status_code = 0  # Nouveau : 0=Absent, 1=Plex, 2=Overseerr
 
             if tmdb_id:
                 # On interroge Overseerr
@@ -217,27 +218,30 @@ def run_sync(sync_users=False):
                 # On transforme tout en texte minuscule et sans espaces inutiles
                 val = str(ov_status_label).strip().lower()
 
-                # Test de présence sur Plex (Status 4, 5 ou textes associés)
+                # 1. Test de demande en cours (Code 2)
+                if val in ['2', '3', 'pending', 'processing', 'demandé', 'en cours', 'approuvé (en cours)']:
+                    ov_id_flag = True
+                    status_code = 2
+                    logger.info(f"✅ {item['title']} en cours sur Overseerr")
+
+                # 2. Test de présence sur Plex (Code 1) - Écrase le code 2 si présent sur les deux
                 if val in ['4', '5', 'available', 'partially_available', 'déjà présent sur plex', 'disponible']:
                     on_plex = True
+                    status_code = 1
                     logger.info(f"✅ {item['title']} détecté sur Plex")
-                
-                # Test de demande en cours (Status 2, 3 ou textes associés)
-                if val in ['2', '3', 'pending', 'processing', 'demandé', 'en cours']:
-                    ov_id_flag = True
 
-                # SAUVEGARDE EN BASE
-                db.save_media(tmdb_id, item['title'], m_type, item['year'], poster, on_server=(1 if on_plex else 0))
+                # SAUVEGARDE EN BASE (On utilise status_code pour la colonne on_server)
+                db.save_media(tmdb_id, item['title'], m_type, item['year'], poster, status_code=status_code)
                 
                 # Petit log pour confirmer la détection
                 if on_plex:
-                    logger.info(f"✅ {item['title']} est sur Plex (via Overseerr)")
+                    logger.info(f"✅ {item['title']} est sur Plex")
 
             media_info_map[key] = {
                 "tmdb_id": tmdb_id,
                 "m_type": m_type,
                 "poster": poster,
-                "on_server": on_plex,
+                "on_server": status_code,
                 "can_request": can_request,
                 "overseerr_status": ov_status_label,
                 "overseerr_id": ov_id_flag

@@ -32,7 +32,7 @@ class Database:
                         media_type TEXT,
                         year INTEGER,
                         poster_path TEXT,
-                        on_server INTEGER DEFAULT 0,
+                        on_server INTEGER DEFAULT 0, -- 0: Rien, 1: Plex, 2: Overseerr
                         added_at DATETIME
                     )
                 ''')
@@ -59,14 +59,14 @@ class Database:
             row = cursor.fetchone()
             return row[0] if row else None
 
-    def save_media(self, tmdb_id, title, media_type, year, poster_path, on_server=0):
+    def save_media(self, tmdb_id, title, media_type, year, poster_path, status_code=0):
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
             cursor.execute('''
                 INSERT OR REPLACE INTO media_cache 
                 (tmdb_id, title, media_type, year, poster_path, on_server, added_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
-            ''', (tmdb_id, title, media_type, year, poster_path, on_server, datetime.now()))
+            ''', (tmdb_id, title, media_type, year, poster_path, status_code, datetime.now()))
             conn.commit()
 
     def get_cached_media(self, title, year):
