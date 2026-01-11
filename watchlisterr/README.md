@@ -8,32 +8,37 @@
 
 ---
 
-**Watchlisterr** centralise les listes de lecture de vos utilisateurs Plex et synchronise vers Overseerr
+Watchlisterr est un pont intelligent entre votre Watchlist Plex et vos outils de téléchargement (Overseerr/Radarr/Sonarr).
 
-## 🚀 Points forts
+Il permet de transformer l'ajout d'un film ou d'une série dans votre liste de favoris Plex en une requête automatique de contenu, tout en offrant un tableau de bord visuel pour suivre l'état de vos demandes.
 
-* 🔄 **Synchronisation Automatique** : Scan cyclique de Plex et Overseerr.
-* 🎯 **Précision TMDB** : Filtrage par ID unique pour éviter les erreurs de posters sur les remakes.
-* 🛡️ **Image Proxy** : Système intégré pour contourner les blocages d'affichage (CORS) sous Home Assistant Ingress.
-* 👥 **Multi-User** : Identification claire du demandeur pour chaque média.
-* ⚡ **Ultra-Rapide** : Cache local SQLite pour un chargement instantané.
+🎯 Le But
+Simplifier la gestion des médias pour vous et vos utilisateurs. Plus besoin d'ouvrir plusieurs applications :
 
-## 🛠️ Configuration
+Vous parcourez Plex, vous voyez un film qui vous tente.
 
-Une fois l'Add-on installé, renseignez les clés suivantes :
+Vous cliquez sur "Ajouter à la Watchlist".
 
-| Clé | Description |
-| :--- | :--- |
-| `plex_token` | Votre jeton d'authentification Plex. |
-| `overseerr_api_key` | Clé API disponible dans les réglages Overseerr. |
-| `tmdb_api_key` | Clé API (v3) de TheMovieDatabase. |
+Watchlisterr le détecte, l'envoie à Overseerr, et vous informe quand il est prêt sur votre serveur.
 
-## 🏗️ Architecture
-L'application repose sur un backend **FastAPI** qui pilote la logique de synchronisation en arrière-plan, tandis que le frontend en **Jinja2/Tailwind** assure une présentation élégante des posters récupérés.
+⚙️ Configuration
+L'outil se configure via quelques options simples :
 
-## 📌 À Faire (Roadmap)
-- [x] Ajouter une chips en haut a gauche des posters (logo plex mini = Dispo / logo Overseerr mini = En cours)
-- [x] Si dry_run off, pas d'affichage dans l'UI
-- [x] Ajout d'un filtre (à coté de Watchlist) pour filtrer par users/etat (Plex ou Overseerr) et type (movie/tv)
-- [x] Stabiliser page web
-- [ ] Activer l'envoi automatique des requêtes (Mode Production).
+Plex URL & Token : Pour lire les listes de favoris de vos utilisateurs.
+
+Overseerr URL & API Key : Pour envoyer les demandes de téléchargement.
+
+TMDB API Key : Pour récupérer les superbes affiches (posters) et les détails des films.
+
+Intervalle de synchronisation : Fréquence à laquelle l'outil vérifie vos listes (ex: toutes les 3 minutes).
+
+Mode Simulation (Dry Run) : Permet de tester l'outil sans envoyer de vraies requêtes.
+
+📊 Le Dashboard
+Le tableau de bord intégré vous permet de :
+
+Voir tous les films demandés par vos amis.
+
+Filtrer par état : Non demandé, En cours (Logo Overseerr) ou Disponible (Logo Plex).
+
+Lancer une synchronisation manuelle d'un simple clic.
