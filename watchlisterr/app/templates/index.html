@@ -20,7 +20,7 @@
         .status-chip {
             position: absolute;
             top: 8px;
-            left: 8px; /* J'ai mis à gauche pour ne pas chevaucher le badge Film/Série à droite */
+            left: 8px;
             z-index: 20;
             padding: 4px;
             border-radius: 8px;
@@ -29,6 +29,24 @@
         }
         .status-chip:hover { transform: scale(1.1); }
         .status-chip img { height: 16px; width: auto; }
+        
+        /* Style pour les selects de filtrage */
+        .filter-select {
+            background-color: rgba(31, 41, 55, 0.5);
+            border: 1px solid rgba(75, 85, 99, 0.4);
+            color: #D1D5DB;
+            font-size: 0.75rem;
+            padding: 0.4rem 2rem 0.4rem 0.75rem;
+            border-radius: 0.75rem;
+            outline: none;
+            transition: all 0.2s;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236B7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 0.5rem center;
+            background-size: 1rem;
+        }
+        .filter-select:focus { border-color: #7C3AED; outline: none; box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.5); }
     </style>
 </head>
 <body class="text-gray-200 min-h-screen p-4 md:p-8" hx-get="/" hx-trigger="every 30s" hx-select="body" hx-swap="outerHTML">
@@ -59,20 +77,16 @@
     </div>
 
     <div class="flex items-center gap-6">
+    {% if dry_run %}
         <div title="Mode Simulation : Les requêtes ne sont pas envoyées à Overseerr."
             class="flex items-center gap-3 bg-gray-800/30 px-4 py-2 rounded-xl border border-gray-800 cursor-help transition-all">
             <span class="text-xs font-bold uppercase tracking-wider text-gray-500">Dry Run</span>
             <div class="flex items-center gap-2">
-                {% if dry_run %}
                     <span class="flex h-2 w-2 rounded-full bg-indigo-500 shadow-[0_0_8px_#6366f1]"></span>
                     <span class="text-[10px] font-bold text-indigo-400 uppercase">Actif</span>
-                {% else %}
-                    <span class="flex h-2 w-2 rounded-full bg-gray-600"></span>
-                    <span class="text-[10px] font-bold text-gray-500 uppercase">Inactif</span>
-                {% endif %}
             </div>
         </div>
-        
+     {% endif %}
         <button hx-get="/sync" 
                 hx-swap="none"
                 class="px-5 py-2 bg-purple-600 hover:bg-purple-700 rounded-xl font-bold transition-all flex items-center gap-2 active:scale-95 disabled:opacity-50"
@@ -86,13 +100,45 @@
 </header>
 
 <main class="max-w-7xl mx-auto mb-10">
-    <h2 class="text-lg font-semibold mb-6 flex items-center gap-2">
-        🔍 Watchlists <span class="text-gray-500 font-normal">({{ items_to_request|length }})</span>
-    </h2>
+    <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+        <h2 class="text-lg font-semibold flex items-center gap-2">
+            🔍 Watchlists <span class="text-gray-500 font-normal">({{ items_to_request|length }})</span>
+        </h2>
+        
+        <div class="flex flex-wrap items-center gap-3">
+            <select id="filterUser" onchange="applyFilters()" class="filter-select">
+                <option value="all">Utilisateurs (Tous)</option>
+                {% set users = [] %}
+                {% for item in items_to_request %}
+                    {% if item.requested_by not in users %}
+                        {% set _ = users.append(item.requested_by) %}
+                        <option value="{{ item.requested_by }}">{{ item.requested_by }}</option>
+                    {% endif %}
+                {% endfor %}
+            </select>
+
+            <select id="filterType" onchange="applyFilters()" class="filter-select">
+                <option value="all">Type (Tous)</option>
+                <option value="movie">🎬 Films</option>
+                <option value="tv">📺 Séries</option>
+            </select>
+
+            <select id="filterStatus" onchange="applyFilters()" class="filter-select">
+                <option value="all">Statut (Tous)</option>
+                <option value="plex">✅ Sur Plex</option>
+                <option value="overseerr">⏳ Sur Overseerr</option>
+                <option value="none">❌ Non Demandés</option>
+            </select>
+        </div>
+    </div>
     
-    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
+    <div id="mediaGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
         {% for item in items_to_request %}
-        <div class="relative group aspect-[2/3] rounded-xl overflow-hidden border border-gray-800 transition-all hover:border-purple-500 hover:scale-105 shadow-2xl bg-gray-900">
+        <div class="media-card relative group aspect-[2/3] rounded-xl overflow-hidden border border-gray-800 transition-all hover:border-purple-500 hover:scale-105 shadow-2xl bg-gray-900"
+             data-user="{{ item.requested_by }}"
+             data-type="{{ item.type }}"
+             data-onplex="{{ 'true' if item.on_server else 'false' }}"
+             data-onoverseerr="{{ 'true' if item.overseerr_id else 'false' }}">
             
             {% if item.on_server %}
                 <div class="status-chip glass" title="Disponible sur Plex">
@@ -132,10 +178,10 @@
                 {% if item.type == 'movie' %} 🎬 Film {% else %} 📺 Série {% endif %}
             </div>
         </div>
-        {% else %}
         {% endfor %}
     </div>
 </main>
+
 <section class="max-w-7xl mx-auto">
     <div class="flex items-center justify-between mb-3 px-1">
         <h2 class="text-xs font-bold uppercase tracking-widest text-gray-500">Live Activity Logs</h2>
@@ -161,5 +207,43 @@
         <div class="animate-pulse inline-block w-2 h-4 bg-green-500 ml-1"></div>
     </div>
 </section>
+
+<script>
+    function applyFilters() {
+        const user = document.getElementById('filterUser').value;
+        const type = document.getElementById('filterType').value;
+        const status = document.getElementById('filterStatus').value;
+        const cards = document.querySelectorAll('.media-card');
+
+        cards.forEach(card => {
+            const cardUser = card.getAttribute('data-user');
+            const cardType = card.getAttribute('data-type');
+            const onPlex = card.getAttribute('data-onplex') === 'true';
+            const onOverseerr = card.getAttribute('data-onoverseerr') === 'true';
+
+            let show = true;
+
+            // Filtre Utilisateur
+            if (user !== 'all' && cardUser !== user) show = false;
+
+            // Filtre Type
+            if (type !== 'all' && cardType !== type) show = false;
+
+            // Filtre Statut
+            if (status === 'plex' && !onPlex) show = false;
+            if (status === 'overseerr' && !onOverseerr) show = false;
+            if (status === 'none' && (onPlex || onOverseerr)) show = false;
+
+            // Application visuelle
+            card.style.display = show ? 'block' : 'none';
+        });
+    }
+
+    // Initialisation après swap HTMX
+    document.body.addEventListener('htmx:afterSwap', function(evt) {
+        applyFilters();
+    });
+</script>
+
 </body>
 </html>
