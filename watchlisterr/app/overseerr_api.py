@@ -10,7 +10,7 @@ class OverseerrClient:
         self.headers = {"X-Api-Key": api_key}
 
     def submit_request(self, tmdb_id, media_type, user_id, title, is_simulation=True):
-        """Soumet une requête à Overseerr (Piloté par l'option HA)"""
+        """Soumet une requête à Overseerr"""
         
         if is_simulation:
             logger.info(f"🧪 [SIMULATION] Requête pour '{title}' (ID:{tmdb_id}) | User ID:{user_id}")
@@ -19,12 +19,18 @@ class OverseerrClient:
         # --- MODE PRODUCTION ---
         url = f"{self.base_url}/api/v1/request"
         
-        # On s'assure que les IDs sont bien des entiers pour le JSON
+        # Déterminer le type correct
+        is_tv = media_type in ["show", "tv"]
+        
         payload = {
-            "mediaType": "tv" if media_type in ["show", "tv"] else "movie",
+            "mediaType": "tv" if is_tv else "movie",
             "mediaId": int(tmdb_id),
             "userId": int(user_id) if user_id else None
         }
+
+        # AJOUT CRUCIAL : Overseerr a besoin de savoir quelles saisons demander
+        if is_tv:
+            payload["seasons"] = "all" 
 
         try:
             r = requests.post(url, json=payload, headers=self.headers, timeout=15)
