@@ -8,7 +8,7 @@
 
 ---
 
-![Version](https://img.shields.io/badge/Version-0.3.5-blue.svg)
+![Version](https://img.shields.io/badge/Version-1.0.0-blue.svg)
 ![Status](https://img.shields.io/badge/Status-Stable-success.svg)
 ![Python](https://img.shields.io/badge/Python-3.9+-blue.svg)
 
