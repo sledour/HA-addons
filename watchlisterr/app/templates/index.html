@@ -55,8 +55,33 @@
             -webkit-overflow-scrolling: touch;
         }
 
+        /* --- SWIPE LATÉRAL MOBILE SUR 2 LIGNES --- */
         @media (max-width: 640px) {
             .filter-select { flex: 1 1 calc(50% - 10px); min-width: 120px; }
+            #mediaGrid {
+                display: grid;
+                /* On force 2 lignes de posters de même hauteur */
+                grid-template-rows: repeat(2, 1fr);
+                /* On permet aux colonnes de se créer à l'infini vers la droite */
+                grid-auto-flow: column;
+                grid-auto-columns: 140px; 
+                
+                overflow-x: auto;
+                scroll-snap-type: x mandatory;
+                gap: 12px;
+                padding-bottom: 20px;
+                scrollbar-width: none;
+            }
+
+            #mediaGrid::-webkit-scrollbar {
+                display: none;
+            }
+
+            .media-card {
+                scroll-snap-align: start;
+                height: 210px; /* Hauteur fixe pour garantir l'alignement des 2 lignes */
+                width: 140px;
+            }
         }
     </style>
 </head>
