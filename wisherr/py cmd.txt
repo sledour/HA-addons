@@ -3,6 +3,6 @@ py -m uvicorn app.main:app --reload
 
 GitHub
 git commit -m "feat: infrastructure de base et authentification complète"
-git tag -a v0.1.0 -m "Version initiale avec Auth et Dashboard WIP"
+git tag -a v0.0.2 -m "Dashboard done"
 git push origin main
 git push origin --tags

@@ -8,229 +8,172 @@
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        @keyframes pulse-soft {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.7; }
-        }
-        .animate-pulse-soft {
-            animation: pulse-soft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-        }
-        .custom-scrollbar::-webkit-scrollbar {
-            width: 4px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-            background: transparent;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: #334155;
-            border-radius: 10px;
-        }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+        body { overflow: hidden; } /* On laisse le scroll aux conteneurs internes */
     </style>
 </head>
-<body class="bg-slate-950 text-white min-h-screen font-sans">
+<body class="bg-slate-950 text-white flex h-screen font-sans">
 
-    <nav class="bg-slate-900/80 border-b border-slate-800 backdrop-blur-md sticky top-0 z-50">
-        <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-            <div class="flex items-center gap-3">
-                <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center shadow-lg shadow-indigo-500/20">
-                    <i class="fa-solid fa-gift text-sm"></i>
-                </div>
-                <span class="text-xl font-black tracking-tight text-white">Wish<span class="text-indigo-500">err</span></span>
+    <aside class="w-64 border-r border-slate-800 flex flex-col bg-slate-900/50 backdrop-blur-xl shrink-0">
+        <div class="p-6 flex items-center gap-3">
+            <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center shadow-lg shadow-indigo-500/20">
+                <i class="fa-solid fa-gift text-sm"></i>
             </div>
-            
-            <div class="flex items-center gap-6">
-                <div class="hidden sm:flex flex-col items-end">
-                    <span class="text-xs text-slate-500 uppercase font-bold tracking-wider">Utilisateur</span>
-                    <span class="text-sm font-medium text-slate-200">{{ user.username }}</span>
-                </div>
-                <a href="/logout" class="h-10 w-10 flex items-center justify-center rounded-xl bg-slate-800 hover:bg-red-500/20 hover:text-red-500 transition-all border border-slate-700">
-                    <i class="fa-solid fa-power-off text-sm"></i>
-                </a>
-            </div>
+            <span class="text-xl font-black tracking-tight uppercase">Wish<span class="text-indigo-500">err</span></span>
         </div>
-    </nav>
 
-    <main class="max-w-7xl mx-auto px-6 py-8">
+        <nav class="flex-1 px-4 py-4 space-y-2">
+            <a href="/" class="flex items-center gap-3 px-4 py-3 bg-indigo-600/10 text-indigo-400 rounded-xl font-bold transition-all">
+                <i class="fa-solid fa-house text-sm"></i> Dashboard
+            </a>
+        </nav>
         
-        <div class="max-w-4xl mx-auto mb-12">
-            <div class="relative group">
-                <i class="fa-solid fa-search absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-indigo-500 transition-colors"></i>
-                <input type="text" 
-                    id="search-input"
-                    placeholder="Chercher un article (ex: Harry Potter Lego)..." 
-                    class="w-full bg-slate-900 border-2 border-slate-800 py-4 pl-14 pr-4 rounded-2xl focus:border-indigo-500 outline-none transition-all text-lg shadow-2xl">
+        <div class="p-4 border-t border-slate-800 bg-slate-950/30">
+            <h3 class="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-2 mb-4 flex justify-between items-center">
+                Notes Rapides
+                <i class="fa-solid fa-lightbulb text-yellow-500/50"></i>
+            </h3>
+            <div id="notes-list" class="space-y-3 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
+                {% for note in user.quick_notes|sort(attribute='id', reverse=True) %}
+                    {% include "fragments/note_item.html" %}
+                {% endfor %}
             </div>
         </div>
+    </aside>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            
-            <div class="lg:col-span-1">
-                <div class="sticky top-24">
-                    <h2 class="text-xl font-bold mb-4 flex items-center gap-2 text-slate-100">
-                        <i class="fa-solid fa-lightbulb text-yellow-500 animate-pulse-soft"></i> Idées rapides
-                    </h2>
-                    
-                    <form hx-post="/notes/add" hx-target="#notes-list" hx-swap="afterbegin" hx-on::after-request="this.reset()" class="mb-6">
-                        <div class="flex gap-2 p-2 bg-slate-900 border border-slate-800 rounded-2xl shadow-inner">
-                            <input type="text" name="content" required placeholder="Ajoute une idée ici..." 
-                                class="flex-1 bg-transparent px-4 py-2 outline-none text-slate-200 placeholder:text-slate-600">
-                            <button type="submit" class="bg-indigo-600 w-10 h-10 rounded-xl hover:bg-indigo-500 transition-colors shadow-lg shadow-indigo-600/20">
-                                <i class="fa-solid fa-paper-plane text-xs"></i>
-                            </button>
-                        </div>
-                    </form>
-
-                    <div id="notes-list" class="space-y-3 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
-                        {% for note in user.quick_notes|sort(attribute='id', reverse=True) %}
-                            {% include "fragments/note_item.html" %}
-                        {% endfor %}
-                    </div>
+    <main class="flex-1 flex flex-col min-w-0 bg-slate-950 h-screen overflow-hidden">
+        
+        <header class="h-20 border-b border-slate-800 flex items-center justify-between px-8 bg-slate-950/50 backdrop-blur-md shrink-0">
+            <div class="flex-1 max-w-2xl">
+                <div class="relative group">
+                    <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-indigo-400 transition-colors"></i>
+                    <input type="text" id="search-input" placeholder="Chercher un article..." 
+                           class="w-full bg-slate-900/50 border border-slate-800 rounded-2xl py-3 pl-12 pr-4 outline-none focus:border-indigo-500/50 focus:ring-4 focus:ring-indigo-500/5 transition-all">
                 </div>
             </div>
 
-            <div class="lg:col-span-2">
-                
-                <section class="bg-slate-900 border border-slate-800 p-6 rounded-3xl mb-10 shadow-xl relative overflow-hidden">
-                    <div class="absolute top-0 right-0 p-8 opacity-5">
-                        <i class="fa-solid fa-plus-circle text-6xl"></i>
+            <div class="relative ml-4 group">
+                <button class="w-10 h-10 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center hover:border-indigo-500 transition-all cursor-pointer">
+                    <i class="fa-solid fa-user text-slate-400"></i>
+                </button>
+                <div class="absolute right-0 top-full pt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-60">
+                    <div class="bg-slate-900 border border-slate-800 rounded-xl shadow-2xl p-2 w-48">
+                        <div class="px-4 py-2 text-[10px] font-bold text-slate-500 uppercase border-b border-slate-800 mb-1">Connecté en tant que {{ user.username }}</div>
+                        <a href="/logout" class="flex items-center gap-3 px-4 py-2 text-red-400 hover:bg-red-400/10 rounded-lg transition-all text-sm font-bold">
+                            <i class="fa-solid fa-right-from-bracket"></i> Déconnexion
+                        </a>
                     </div>
-                    
-                    <h3 class="text-sm font-bold uppercase tracking-widest text-slate-500 mb-6 flex items-center gap-2">
-                        <i class="fa-solid fa-pen-to-square"></i> Nouvel article manuel
-                    </h3>
-
-                    <form action="/items/manual" method="post" enctype="multipart/form-data" class="space-y-4">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div class="space-y-4">
-                                <input type="text" name="title" placeholder="Nom de l'article" required
-                                    class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 transition-all text-white">
-                                
-                                <div class="flex gap-2">
-                                    <input type="text" name="price" placeholder="Prix (ex: 45€)" 
-                                        class="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 transition-all text-white">
-                                    
-                                    <select name="source_type" class="bg-slate-800 border border-slate-700 rounded-xl px-3 py-3 outline-none text-slate-400 text-sm cursor-pointer">
-                                        <option value="manuel">Manuel</option>
-                                        <option value="photo">Photo</option>
-                                        <option value="magasin">Magasin</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <label class="group relative flex flex-col items-center justify-center border-2 border-dashed border-slate-700 rounded-2xl py-6 px-4 cursor-pointer hover:border-indigo-500 hover:bg-indigo-500/5 transition-all">
-                                <i class="fa-solid fa-camera text-3xl text-slate-600 group-hover:text-indigo-400 mb-2 transition-colors"></i>
-                                <span class="text-xs text-slate-500 group-hover:text-slate-300 font-medium text-center">Glisser une photo ou cliquer</span>
-                                <input type="file" name="image" accept="image/*" class="hidden">
-                            </label>
-                        </div>
-
-                        <button type="submit" class="w-full bg-indigo-600 py-4 rounded-xl font-black uppercase tracking-widest hover:bg-indigo-500 transition-all shadow-lg shadow-indigo-600/30 active:scale-[0.98]">
-                            Ajouter à ma liste
-                        </button>
-                    </form>
-                </section>
-
-                <div class="flex items-center justify-between mb-6">
-                    <h2 class="text-2xl font-black flex items-center gap-3">
-                        <i class="fa-solid fa-box-open text-indigo-500"></i> Ma liste
-                    </h2>
-                    <span class="bg-slate-800 text-slate-400 text-xs px-3 py-1 rounded-full font-bold border border-slate-700">
-                        {{ user.items|length }} articles
-                    </span>
                 </div>
-                
-                <div id="items-grid" class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {% if not user.items %}
-                        <div class="col-span-full py-20 text-center border-2 border-dashed border-slate-800 rounded-3xl group">
-                            <i class="fa-solid fa-ghost text-4xl text-slate-800 mb-4 group-hover:text-slate-700 transition-colors"></i>
-                            <p class="text-slate-600 font-medium">Votre liste est déserte...</p>
-                        </div>
-                    {% endif %}
-                    
-                    {% for item in user.items|sort(attribute='id', reverse=True) %}
-                        {% include "fragments/item_card.html" %}
-                    {% endfor %}
-                </div>
+            </div>
+        </header>
+
+        <div class="flex-1 overflow-y-auto custom-scrollbar p-8">
+            <div class="flex items-center justify-between mb-8">
+                <h2 class="text-2xl font-black">Ma Liste <span class="text-indigo-500 text-sm ml-2 opacity-50">{{ user.items|length }}</span></h2>
+            </div>
+
+            <div id="items-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+                {% for item in user.items|sort(attribute='id', reverse=True) %}
+                    {% include "fragments/item_card.html" %}
+                {% endfor %}
             </div>
         </div>
     </main>
-    
+
+    <div class="fixed bottom-8 right-8 flex flex-col gap-4 z-100">
+        <button onclick="openNoteModal()" class="w-14 h-14 bg-slate-800 text-white rounded-2xl shadow-2xl flex items-center justify-center hover:scale-110 transition-all cursor-pointer group border border-slate-700">
+            <i class="fa-solid fa-note-sticky text-xl group-hover:text-yellow-500"></i>
+        </button>
+        <button onclick="openAddModal()" class="w-14 h-14 bg-indigo-600 text-white rounded-2xl shadow-2xl flex items-center justify-center hover:scale-110 transition-all cursor-pointer group shadow-indigo-500/20">
+            <i class="fa-solid fa-plus text-xl"></i>
+        </button>
+    </div>
+
+    <div id="add-modal" class="hidden fixed inset-0 bg-slate-950/90 backdrop-blur-sm z-200 items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 w-full max-w-xl rounded-3xl p-8 shadow-2xl">
+            <h3 class="text-xl font-bold mb-6 flex items-center gap-2">
+                <i class="fa-solid fa-plus-circle text-indigo-500"></i> Nouvel Article
+            </h3>
+            <form action="/items/manual" method="post" enctype="multipart/form-data" class="space-y-4">
+                <input type="text" name="title" placeholder="Lien Amazon ou Nom de l'article" required
+                       class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 transition-all">
+                <div class="grid grid-cols-2 gap-4">
+                    <input type="text" name="price" placeholder="Prix (ex: 45€)" class="bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 outline-none focus:border-indigo-500">
+                    <select name="source_type" class="bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 outline-none cursor-pointer">
+                        <option value="manuel">Manuel</option>
+                        <option value="photo">Photo</option>
+                    </select>
+                </div>
+                <label class="flex flex-col items-center justify-center border-2 border-dashed border-slate-700 rounded-2xl py-6 px-4 cursor-pointer hover:border-indigo-500 transition-all">
+                    <i class="fa-solid fa-image text-2xl text-slate-600 mb-2"></i>
+                    <span class="text-xs text-slate-500">Ajouter une image</span>
+                    <input type="file" name="image" accept="image/*" class="hidden">
+                </label>
+                <div class="flex gap-3 pt-4">
+                    <button type="button" onclick="closeAddModal()" class="flex-1 py-3 bg-slate-800 rounded-xl font-bold">Annuler</button>
+                    <button type="submit" class="flex-1 py-3 bg-indigo-600 rounded-xl font-bold">Enregistrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="note-modal" class="hidden fixed inset-0 bg-slate-950/90 backdrop-blur-sm z-200 items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 w-full max-w-md rounded-3xl p-8">
+            <h3 class="text-xl font-bold mb-6">Nouvelle Idée</h3>
+            <form hx-post="/notes/add" hx-target="#notes-list" hx-swap="afterbegin" hx-on::after-request="closeNoteModal(); this.reset()" class="space-y-4">
+                <textarea name="content" required placeholder="C'est quoi l'idée ?" rows="4"
+                          class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 resize-none"></textarea>
+                <div class="flex gap-3">
+                    <button type="button" onclick="closeNoteModal()" class="flex-1 py-3 bg-slate-800 rounded-xl font-bold">Fermer</button>
+                    <button type="submit" class="flex-1 py-3 bg-indigo-600 rounded-xl font-bold">Sauvegarder</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="edit-modal" class="hidden fixed inset-0 bg-slate-950/90 backdrop-blur-sm z-200 items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 w-full max-w-md rounded-3xl p-8">
+            <h3 class="text-xl font-bold mb-6 text-white">Modifier l'article</h3>
+            <form id="edit-form" action="/items/update" method="post" enctype="multipart/form-data" class="space-y-4">
+                <input type="hidden" name="item_id" id="edit-id">
+                <input type="text" name="title" id="edit-title" required class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 text-white">
+                <input type="text" name="price" id="edit-price" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 text-white">
+                <input type="file" name="image" accept="image/*" class="w-full text-sm text-slate-400">
+                <div class="flex gap-3 pt-4">
+                    <button type="button" onclick="closeEditModal()" class="flex-1 py-3 bg-slate-800 rounded-xl font-bold">Annuler</button>
+                    <button type="submit" class="flex-1 py-3 bg-indigo-600 rounded-xl font-bold">Mettre à jour</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
-        // Fonction pour remplir la recherche depuis une note
+        // Modal Add
+        function openAddModal() { document.getElementById('add-modal').classList.replace('hidden', 'flex'); }
+        function closeAddModal() { document.getElementById('add-modal').classList.replace('flex', 'hidden'); }
+
+        // Modal Note
+        function openNoteModal() { document.getElementById('note-modal').classList.replace('hidden', 'flex'); }
+        function closeNoteModal() { document.getElementById('note-modal').classList.replace('flex', 'hidden'); }
+
+        // Modal Edit
+        function handleEdit(btn) {
+            document.getElementById('edit-id').value = btn.getAttribute('data-id');
+            document.getElementById('edit-title').value = btn.getAttribute('data-title');
+            document.getElementById('edit-price').value = btn.getAttribute('data-price');
+            openEditModal();
+        }
+        function openEditModal() { document.getElementById('edit-modal').classList.replace('hidden', 'flex'); }
+        function closeEditModal() { document.getElementById('edit-modal').classList.replace('flex', 'hidden'); }
+
+        // Remplir recherche depuis note
         function fillSearch(text) {
             const searchInput = document.getElementById('search-input');
             searchInput.value = text;
             searchInput.focus();
-            
-            // Effet visuel sur l'input
-            searchInput.classList.add('ring-2', 'ring-indigo-500');
-            setTimeout(() => searchInput.classList.remove('ring-2', 'ring-indigo-500'), 1000);
         }
-
-        // Prévisualisation du nom du fichier photo (optionnel)
-        document.querySelector('input[type="file"]').addEventListener('change', function(e) {
-            const fileName = e.target.files[0].name;
-            const span = e.target.parentElement.querySelector('span');
-            span.textContent = "Photo sélectionnée : " + fileName;
-            span.classList.add('text-indigo-400');
-        });
     </script>
-
-<div id="edit-modal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-100 items-center justify-center p-4">
-    <div class="bg-slate-900 border border-slate-800 w-full max-w-md rounded-3xl p-8 shadow-2xl">
-        <h3 class="text-xl font-bold mb-6">Modifier l'article</h3>
-        <form id="edit-form" action="/items/update" method="post" enctype="multipart/form-data" class="space-y-4">
-            <input type="hidden" name="item_id" id="edit-id">
-            
-            <div>
-                <label class="text-xs font-bold text-slate-500 uppercase mb-2 block">Nom de l'article</label>
-                <input type="text" name="title" id="edit-title" required class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 outline-none focus:border-indigo-500">
-            </div>
-            
-            <div>
-                <label class="text-xs font-bold text-slate-500 uppercase mb-2 block">Prix</label>
-                <input type="text" name="price" id="edit-price" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 outline-none focus:border-indigo-500">
-            </div>
-
-            <div>
-                <label class="text-xs font-bold text-slate-500 uppercase mb-2 block">Changer la photo (optionnel)</label>
-                <input type="file" name="image" accept="image/*" class="w-full text-sm text-slate-400">
-            </div>
-
-            <div class="flex gap-3 mt-8">
-                <button type="button" onclick="closeEditModal()" class="flex-1 py-3 bg-slate-800 rounded-xl font-bold hover:bg-slate-700 transition-all">Annuler</button>
-                <button type="submit" class="flex-1 py-3 bg-indigo-600 rounded-xl font-bold hover:bg-indigo-500 transition-all">Mettre à jour</button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<script>
-function handleEdit(btn) {
-    // On récupère les données proprement depuis les attributs HTML
-    const id = btn.getAttribute('data-id');
-    const title = btn.getAttribute('data-title');
-    const price = btn.getAttribute('data-price');
-    
-    // On appelle l'ouverture de la modal
-    openEditModal(id, title, price);
-}
-
-function openEditModal(id, title, price) {
-    document.getElementById('edit-id').value = id;
-    document.getElementById('edit-title').value = title;
-    document.getElementById('edit-price').value = price;
-    
-    const modal = document.getElementById('edit-modal');
-    modal.classList.remove('hidden');
-    modal.classList.add('flex');
-}
-
-function closeEditModal() {
-    const modal = document.getElementById('edit-modal');
-    modal.classList.add('hidden');
-    modal.classList.remove('flex'); // On retire flex à la fermeture
-}
-</script>
 </body>
 </html>

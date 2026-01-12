@@ -1,48 +1,29 @@
-<div id="item-{{ item.id }}" class="group relative bg-slate-900 rounded-2xl overflow-hidden border border-slate-800 transition-all hover:border-indigo-500 hover:shadow-2xl hover:shadow-indigo-500/10 hover:-translate-y-1">
-    
-    <div class="aspect-2/3 w-full bg-slate-800 relative overflow-hidden">
+<div id="item-{{ item.id }}" class="group relative">
+    <div class="aspect-2/3 bg-slate-800 rounded-2xl overflow-hidden relative border border-slate-800 transition-all group-hover:border-indigo-500 group-hover:-translate-y-2 shadow-lg">
         {% if item.image_url %}
             <img src="{{ item.image_url }}" alt="{{ item.title }}" class="w-full h-full object-cover">
-        {% else %}
-            <div class="w-full h-full flex flex-col items-center justify-center text-slate-700">
-                <i class="fa-solid fa-gift text-4xl mb-2"></i>
-                <span class="text-xs uppercase font-bold tracking-widest">Pas d'image</span>
-            </div>
         {% endif %}
-
-        <div class="absolute inset-0 bg-linear-to-t from-slate-950 via-transparent to-transparent opacity-90"></div>
-
-        <div class="absolute top-2 right-2 flex flex-col gap-2 translate-x-12 group-hover:translate-x-0 transition-transform duration-300">
-            <button 
-                data-id="{{ item.id }}"
-                data-title="{{ item.title }}"
-                data-price="{{ item.price or '' }}"
-                onclick="handleEdit(this)"
-                class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center hover:bg-indigo-500 shadow-lg cursor-pointer">
-                <i class="fa-solid fa-pen text-xs text-white"></i>
+        
+        <div class="absolute inset-0 bg-slate-950/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+             <button data-id="{{ item.id }}" data-title="{{ item.title }}" data-price="{{ item.price or '' }}"
+                onclick="handleEdit(this)" class="w-10 h-10 bg-white/10 backdrop-blur-md rounded-xl flex items-center justify-center hover:bg-white/20 transition-all cursor-pointer">
+                <i class="fa-solid fa-pen text-white text-sm"></i>
             </button>
-            
-            <button hx-delete="/items/{{ item.id }}" 
-                    hx-target="#item-{{ item.id }}" 
-                    hx-swap="outerHTML" 
-                    hx-confirm="Supprimer cet article ?"
-                    class="w-8 h-8 bg-red-600 rounded-lg flex items-center justify-center hover:bg-red-500 shadow-lg cursor-pointer">
-                <i class="fa-solid fa-trash text-xs text-white"></i>
+            <button hx-delete="/items/{{ item.id }}" hx-target="#item-{{ item.id }}" hx-confirm="Supprimer ?"
+                class="w-10 h-10 bg-red-500/20 backdrop-blur-md rounded-xl flex items-center justify-center hover:bg-red-500/40 transition-all cursor-pointer">
+                <i class="fa-solid fa-trash text-red-400 text-sm"></i>
             </button>
         </div>
+    </div>
 
-        <div class="absolute bottom-0 left-0 right-0 p-4">
-            <div class="flex justify-between items-end gap-2">
-                <div class="flex-1 min-w-0">
-                    <p class="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-1">{{ item.source_type }}</p>
-                    <h4 class="font-bold text-white leading-tight truncate">{{ item.title }}</h4>
-                </div>
-                {% if item.price %}
-                    <span class="bg-indigo-600 text-white text-[10px] font-black px-2 py-1 rounded-md shadow-lg shrink-0">
-                        {{ item.price }}
-                    </span>
-                {% endif %}
-            </div>
+    <div class="mt-3 px-1">
+        <h4 class="text-sm font-bold text-white truncate">{{ item.title }}</h4>
+        <div class="flex items-center justify-between mt-1">
+            <span class="text-xs text-slate-500 font-medium">
+                <i class="{{ 'fa-brands fa-amazon' if item.source_type == 'Amazon' else 'fa-solid fa-hand' }} mr-1"></i>
+                {{ item.source_type }}
+            </span>
+            <span class="text-sm font-black text-indigo-400">{{ item.price }}</span>
         </div>
     </div>
 </div>
