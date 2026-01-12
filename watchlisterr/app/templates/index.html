@@ -55,21 +55,26 @@
             -webkit-overflow-scrolling: touch;
         }
 
-        /* --- SWIPE LATÉRAL MOBILE SUR 2 LIGNES --- */
+        /* --- SWIPE LATÉRAL MOBILE SUR 2 LIGNES (CORRIGÉ) --- */
         @media (max-width: 640px) {
             .filter-select { flex: 1 1 calc(50% - 10px); min-width: 120px; }
+
             #mediaGrid {
                 display: grid;
-                /* On force 2 lignes de posters de même hauteur */
-                grid-template-rows: repeat(2, 1fr);
-                /* On permet aux colonnes de se créer à l'infini vers la droite */
+                /* Force exactement 2 lignes */
+                grid-template-rows: repeat(2, 210px); 
+                /* Aligne en colonnes vers la droite */
                 grid-auto-flow: column;
+                /* Définit une largeur fixe par colonne pour éviter le chevauchement */
                 grid-auto-columns: 140px; 
                 
                 overflow-x: auto;
+                /* Désactive le wrapping pour forcer l'horizontal */
+                grid-template-columns: none; 
+                
                 scroll-snap-type: x mandatory;
                 gap: 12px;
-                padding-bottom: 20px;
+                padding: 10px 4px 20px 4px;
                 scrollbar-width: none;
             }
 
@@ -79,8 +84,11 @@
 
             .media-card {
                 scroll-snap-align: start;
-                height: 210px; /* Hauteur fixe pour garantir l'alignement des 2 lignes */
                 width: 140px;
+                height: 210px;
+                /* Sécurité supplémentaire contre le chevauchement */
+                min-width: 140px; 
+                position: relative;
             }
         }
     </style>
