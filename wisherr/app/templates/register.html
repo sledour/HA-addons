@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wisherr - Inscription</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-white flex items-center justify-center min-h-screen">
+    <div class="max-w-md w-full p-8 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl">
+        <h1 class="text-4xl font-black text-center text-indigo-500 mb-2">Wisherr</h1>
+        <p class="text-slate-400 text-center mb-8">Créez votre compte Wisherr</p>
+
+        {% if error %}
+        <div class="bg-red-500/10 border border-red-500 text-red-500 p-3 rounded-lg mb-4 text-sm text-center">
+            {{ error }}
+        </div>
+        {% endif %}
+
+        <form action="/register" method="post" class="space-y-5">
+            <div>
+                <label class="block text-sm font-medium text-slate-300">Nom d'utilisateur</label>
+                <input type="text" name="username" required 
+                    class="w-full mt-1 p-3 bg-slate-800 border border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-300">Mot de passe</label>
+                <input type="password" name="password" required 
+                    class="w-full mt-1 p-3 bg-slate-800 border border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
+            </div>
+            <button type="submit" 
+                class="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg transition-colors shadow-lg shadow-indigo-500/20">
+                S'inscrire
+            </button>
+        </form>
+
+        <p class="mt-6 text-center text-sm text-slate-500">
+            Déjà un compte ? <a href="/login" class="text-indigo-400 hover:underline">Se connecter</a>
+        </p>
+    </div>
+</body>
+</html>

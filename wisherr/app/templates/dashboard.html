@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wisherr - Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        @keyframes pulse-soft {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        .animate-pulse-soft {
+            animation: pulse-soft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-white min-h-screen font-sans">
+
+    <nav class="bg-slate-900/80 border-b border-slate-800 backdrop-blur-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center shadow-lg shadow-indigo-500/20">
+                    <i class="fa-solid fa-gift text-sm"></i>
+                </div>
+                <span class="text-xl font-black tracking-tight text-white">Wish<span class="text-indigo-500">err</span></span>
+            </div>
+            
+            <div class="flex items-center gap-6">
+                <div class="hidden sm:flex flex-col items-end">
+                    <span class="text-xs text-slate-500 uppercase font-bold tracking-wider">Utilisateur</span>
+                    <span class="text-sm font-medium text-slate-200">{{ user.username }}</span>
+                </div>
+                <a href="/logout" class="h-10 w-10 flex items-center justify-center rounded-xl bg-slate-800 hover:bg-red-500/20 hover:text-red-500 transition-all border border-slate-700">
+                    <i class="fa-solid fa-power-off text-sm"></i>
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-6 py-20 flex flex-col items-center justify-center">
+        
+        <div class="relative">
+            <div class="absolute -inset-10 bg-indigo-500/10 blur-3xl rounded-full"></div>
+            
+            <div class="relative bg-slate-900 border border-slate-800 p-12 rounded-[2.5rem] shadow-2xl text-center max-w-lg">
+                <div class="w-20 h-20 bg-slate-800 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-slate-700 shadow-inner">
+                    <i class="fa-solid fa-hammer text-3xl text-indigo-400"></i>
+                </div>
+                
+                <h2 class="text-3xl font-black mb-4">Dashboard</h2>
+                
+                <div class="inline-flex items-center gap-2 px-4 py-1.5 bg-indigo-500/10 border border-indigo-500/30 rounded-full mb-6">
+                    <span class="w-2 h-2 bg-indigo-500 rounded-full animate-pulse"></span>
+                    <span class="text-xs font-bold text-indigo-400 uppercase tracking-widest animate-pulse-soft">Work in Progress</span>
+                </div>
+                
+                <p class="text-slate-400 leading-relaxed">
+                    Le moteur de Wisherr est en cours d'assemblage. Bientôt, vous pourrez créer des listes de souhaits intelligentes, suivre vos événements et dénicher les meilleurs prix.
+                </p>

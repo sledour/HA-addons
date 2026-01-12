@@ -1,0 +1,8 @@
+Lancer en mode dev
+py -m uvicorn app.main:app --reload
+
+GitHub
+git commit -m "feat: infrastructure de base et authentification complète"
+git tag -a v0.1.0 -m "Version initiale avec Auth et Dashboard WIP"
+git push origin main
+git push origin --tags
