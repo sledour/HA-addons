@@ -49,47 +49,43 @@
             background-size: 1rem;
         }
 
-        /* Effet de scroll doux pour le futur swipe */
+        /* --- CONFIGURATION DU CARROUSEL (DESKTOP & MOBILE) --- */
         .media-grid-container {
+            display: grid !important; /* Force le mode grid */
+            grid-template-columns: none !important; /* Annule les grid-cols-X de Tailwind */
+            grid-template-rows: repeat(2, 240px); /* 2 lignes de 240px */
+            grid-auto-flow: column; /* Défilement horizontal */
+            grid-auto-columns: 160px; /* Chaque colonne fait 160px */
+            gap: 20px;
+            overflow-x: auto;
+            scroll-snap-type: x mandatory;
             scroll-behavior: smooth;
-            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+            padding: 10px 0;
         }
 
-        /* --- SWIPE LATÉRAL MOBILE SUR 2 LIGNES (CORRIGÉ) --- */
+        .media-grid-container::-webkit-scrollbar { display: none; }
+
+        .media-card {
+            scroll-snap-align: start;
+            width: 160px;
+            height: 240px;
+            min-width: 160px; /* Indispensable pour éviter l'écrasement */
+        }
+
+        /* --- AJUSTEMENTS MOBILE --- */
         @media (max-width: 640px) {
-            .filter-select { flex: 1 1 calc(50% - 10px); min-width: 120px; }
-
-            #mediaGrid {
-                display: grid;
-                /* Force exactement 2 lignes */
-                grid-template-rows: repeat(2, 210px); 
-                /* Aligne en colonnes vers la droite */
-                grid-auto-flow: column;
-                /* Définit une largeur fixe par colonne pour éviter le chevauchement */
-                grid-auto-columns: 140px; 
-                
-                overflow-x: auto;
-                /* Désactive le wrapping pour forcer l'horizontal */
-                grid-template-columns: none; 
-                
-                scroll-snap-type: x mandatory;
+            .media-grid-container {
+                grid-template-rows: repeat(2, 200px);
+                grid-auto-columns: 135px;
                 gap: 12px;
-                padding: 10px 4px 20px 4px;
-                scrollbar-width: none;
             }
-
-            #mediaGrid::-webkit-scrollbar {
-                display: none;
-            }
-
             .media-card {
-                scroll-snap-align: start;
-                width: 140px;
-                height: 210px;
-                /* Sécurité supplémentaire contre le chevauchement */
-                min-width: 140px; 
-                position: relative;
+                width: 135px;
+                height: 200px;
+                min-width: 135px;
             }
+            .filter-select { flex: 1 1 calc(50% - 10px); min-width: 120px; }
         }
     </style>
 </head>
