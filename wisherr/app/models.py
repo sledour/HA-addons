@@ -1,31 +1,39 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, Boolean, Float
+from sqlalchemy import Column, Integer, String, ForeignKey, Boolean, DateTime
 from sqlalchemy.orm import relationship
 from .database import Base
+from datetime import datetime
 
 class User(Base):
     __tablename__ = "users"
+
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String, unique=True, index=True)
-    hashed_password = Column(String)
-    
-    wishlists = relationship("Wishlist", back_populates="owner")
+    hashed_password = Column(String, nullable=True)
 
-class Wishlist(Base):
-    __tablename__ = "wishlists"
+    # On pointe vers les nouvelles classes
+    quick_notes = relationship("QuickNote", back_populates="owner", cascade="all, delete-orphan")
+    items = relationship("Item", back_populates="owner", cascade="all, delete-orphan")
+
+class QuickNote(Base):
+    __tablename__ = "quick_notes"
+
     id = Column(Integer, primary_key=True, index=True)
-    title = Column(String)
-    user_id = Column(Integer, ForeignKey("users.id"))
+    content = Column(String)
+    created_at = Column(DateTime, default=datetime.utcnow)
     
-    owner = relationship("User", back_populates="wishlists")
-    items = relationship("Item", back_populates="wishlist")
+    user_id = Column(Integer, ForeignKey("users.id"))
+    owner = relationship("User", back_populates="quick_notes")
 
 class Item(Base):
     __tablename__ = "items"
+
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String)
-    url = Column(String, nullable=True)
-    price = Column(Float, nullable=True)
-    is_reserved = Column(Boolean, default=False)
-    wishlist_id = Column(Integer, ForeignKey("wishlists.id"))
+    title = Column(String)
+    price = Column(String, nullable=True)
+    image_url = Column(String, nullable=True)
+    product_url = Column(String, nullable=True)
+    source_type = Column(String) # 'search', 'link', 'manual', 'photo'
+    created_at = Column(DateTime, default=datetime.utcnow)
     
-    wishlist = relationship("Wishlist", back_populates="items")
+    user_id = Column(Integer, ForeignKey("users.id"))
+    owner = relationship("User", back_populates="items")

@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Wisherr - Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         @keyframes pulse-soft {
@@ -13,6 +14,16 @@
         }
         .animate-pulse-soft {
             animation: pulse-soft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 10px;
         }
     </style>
 </head>
@@ -39,23 +50,187 @@
         </div>
     </nav>
 
-    <main class="max-w-7xl mx-auto px-6 py-20 flex flex-col items-center justify-center">
+    <main class="max-w-7xl mx-auto px-6 py-8">
         
-        <div class="relative">
-            <div class="absolute -inset-10 bg-indigo-500/10 blur-3xl rounded-full"></div>
+        <div class="max-w-4xl mx-auto mb-12">
+            <div class="relative group">
+                <i class="fa-solid fa-search absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-indigo-500 transition-colors"></i>
+                <input type="text" 
+                    id="search-input"
+                    placeholder="Chercher un article (ex: Harry Potter Lego)..." 
+                    class="w-full bg-slate-900 border-2 border-slate-800 py-4 pl-14 pr-4 rounded-2xl focus:border-indigo-500 outline-none transition-all text-lg shadow-2xl">
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             
-            <div class="relative bg-slate-900 border border-slate-800 p-12 rounded-[2.5rem] shadow-2xl text-center max-w-lg">
-                <div class="w-20 h-20 bg-slate-800 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-slate-700 shadow-inner">
-                    <i class="fa-solid fa-hammer text-3xl text-indigo-400"></i>
+            <div class="lg:col-span-1">
+                <div class="sticky top-24">
+                    <h2 class="text-xl font-bold mb-4 flex items-center gap-2 text-slate-100">
+                        <i class="fa-solid fa-lightbulb text-yellow-500 animate-pulse-soft"></i> Idées rapides
+                    </h2>
+                    
+                    <form hx-post="/notes/add" hx-target="#notes-list" hx-swap="afterbegin" hx-on::after-request="this.reset()" class="mb-6">
+                        <div class="flex gap-2 p-2 bg-slate-900 border border-slate-800 rounded-2xl shadow-inner">
+                            <input type="text" name="content" required placeholder="Ajoute une idée ici..." 
+                                class="flex-1 bg-transparent px-4 py-2 outline-none text-slate-200 placeholder:text-slate-600">
+                            <button type="submit" class="bg-indigo-600 w-10 h-10 rounded-xl hover:bg-indigo-500 transition-colors shadow-lg shadow-indigo-600/20">
+                                <i class="fa-solid fa-paper-plane text-xs"></i>
+                            </button>
+                        </div>
+                    </form>
+
+                    <div id="notes-list" class="space-y-3 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
+                        {% for note in user.quick_notes|sort(attribute='id', reverse=True) %}
+                            {% include "fragments/note_item.html" %}
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="lg:col-span-2">
+                
+                <section class="bg-slate-900 border border-slate-800 p-6 rounded-3xl mb-10 shadow-xl relative overflow-hidden">
+                    <div class="absolute top-0 right-0 p-8 opacity-5">
+                        <i class="fa-solid fa-plus-circle text-6xl"></i>
+                    </div>
+                    
+                    <h3 class="text-sm font-bold uppercase tracking-widest text-slate-500 mb-6 flex items-center gap-2">
+                        <i class="fa-solid fa-pen-to-square"></i> Nouvel article manuel
+                    </h3>
+
+                    <form action="/items/manual" method="post" enctype="multipart/form-data" class="space-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="space-y-4">
+                                <input type="text" name="title" placeholder="Nom de l'article" required
+                                    class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 transition-all text-white">
+                                
+                                <div class="flex gap-2">
+                                    <input type="text" name="price" placeholder="Prix (ex: 45€)" 
+                                        class="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 transition-all text-white">
+                                    
+                                    <select name="source_type" class="bg-slate-800 border border-slate-700 rounded-xl px-3 py-3 outline-none text-slate-400 text-sm cursor-pointer">
+                                        <option value="manuel">Manuel</option>
+                                        <option value="photo">Photo</option>
+                                        <option value="magasin">Magasin</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <label class="group relative flex flex-col items-center justify-center border-2 border-dashed border-slate-700 rounded-2xl py-6 px-4 cursor-pointer hover:border-indigo-500 hover:bg-indigo-500/5 transition-all">
+                                <i class="fa-solid fa-camera text-3xl text-slate-600 group-hover:text-indigo-400 mb-2 transition-colors"></i>
+                                <span class="text-xs text-slate-500 group-hover:text-slate-300 font-medium text-center">Glisser une photo ou cliquer</span>
+                                <input type="file" name="image" accept="image/*" class="hidden">
+                            </label>
+                        </div>
+
+                        <button type="submit" class="w-full bg-indigo-600 py-4 rounded-xl font-black uppercase tracking-widest hover:bg-indigo-500 transition-all shadow-lg shadow-indigo-600/30 active:scale-[0.98]">
+                            Ajouter à ma liste
+                        </button>
+                    </form>
+                </section>
+
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-2xl font-black flex items-center gap-3">
+                        <i class="fa-solid fa-box-open text-indigo-500"></i> Ma liste
+                    </h2>
+                    <span class="bg-slate-800 text-slate-400 text-xs px-3 py-1 rounded-full font-bold border border-slate-700">
+                        {{ user.items|length }} articles
+                    </span>
                 </div>
                 
-                <h2 class="text-3xl font-black mb-4">Dashboard</h2>
-                
-                <div class="inline-flex items-center gap-2 px-4 py-1.5 bg-indigo-500/10 border border-indigo-500/30 rounded-full mb-6">
-                    <span class="w-2 h-2 bg-indigo-500 rounded-full animate-pulse"></span>
-                    <span class="text-xs font-bold text-indigo-400 uppercase tracking-widest animate-pulse-soft">Work in Progress</span>
+                <div id="items-grid" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {% if not user.items %}
+                        <div class="col-span-full py-20 text-center border-2 border-dashed border-slate-800 rounded-3xl group">
+                            <i class="fa-solid fa-ghost text-4xl text-slate-800 mb-4 group-hover:text-slate-700 transition-colors"></i>
+                            <p class="text-slate-600 font-medium">Votre liste est déserte...</p>
+                        </div>
+                    {% endif %}
+                    
+                    {% for item in user.items|sort(attribute='id', reverse=True) %}
+                        {% include "fragments/item_card.html" %}
+                    {% endfor %}
                 </div>
-                
-                <p class="text-slate-400 leading-relaxed">
-                    Le moteur de Wisherr est en cours d'assemblage. Bientôt, vous pourrez créer des listes de souhaits intelligentes, suivre vos événements et dénicher les meilleurs prix.
-                </p>
+            </div>
+        </div>
+    </main>
+    
+    <script>
+        // Fonction pour remplir la recherche depuis une note
+        function fillSearch(text) {
+            const searchInput = document.getElementById('search-input');
+            searchInput.value = text;
+            searchInput.focus();
+            
+            // Effet visuel sur l'input
+            searchInput.classList.add('ring-2', 'ring-indigo-500');
+            setTimeout(() => searchInput.classList.remove('ring-2', 'ring-indigo-500'), 1000);
+        }
+
+        // Prévisualisation du nom du fichier photo (optionnel)
+        document.querySelector('input[type="file"]').addEventListener('change', function(e) {
+            const fileName = e.target.files[0].name;
+            const span = e.target.parentElement.querySelector('span');
+            span.textContent = "Photo sélectionnée : " + fileName;
+            span.classList.add('text-indigo-400');
+        });
+    </script>
+
+<div id="edit-modal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-100 items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 w-full max-w-md rounded-3xl p-8 shadow-2xl">
+        <h3 class="text-xl font-bold mb-6">Modifier l'article</h3>
+        <form id="edit-form" action="/items/update" method="post" enctype="multipart/form-data" class="space-y-4">
+            <input type="hidden" name="item_id" id="edit-id">
+            
+            <div>
+                <label class="text-xs font-bold text-slate-500 uppercase mb-2 block">Nom de l'article</label>
+                <input type="text" name="title" id="edit-title" required class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 outline-none focus:border-indigo-500">
+            </div>
+            
+            <div>
+                <label class="text-xs font-bold text-slate-500 uppercase mb-2 block">Prix</label>
+                <input type="text" name="price" id="edit-price" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 outline-none focus:border-indigo-500">
+            </div>
+
+            <div>
+                <label class="text-xs font-bold text-slate-500 uppercase mb-2 block">Changer la photo (optionnel)</label>
+                <input type="file" name="image" accept="image/*" class="w-full text-sm text-slate-400">
+            </div>
+
+            <div class="flex gap-3 mt-8">
+                <button type="button" onclick="closeEditModal()" class="flex-1 py-3 bg-slate-800 rounded-xl font-bold hover:bg-slate-700 transition-all">Annuler</button>
+                <button type="submit" class="flex-1 py-3 bg-indigo-600 rounded-xl font-bold hover:bg-indigo-500 transition-all">Mettre à jour</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function handleEdit(btn) {
+    // On récupère les données proprement depuis les attributs HTML
+    const id = btn.getAttribute('data-id');
+    const title = btn.getAttribute('data-title');
+    const price = btn.getAttribute('data-price');
+    
+    // On appelle l'ouverture de la modal
+    openEditModal(id, title, price);
+}
+
+function openEditModal(id, title, price) {
+    document.getElementById('edit-id').value = id;
+    document.getElementById('edit-title').value = title;
+    document.getElementById('edit-price').value = price;
+    
+    const modal = document.getElementById('edit-modal');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+}
+
+function closeEditModal() {
+    const modal = document.getElementById('edit-modal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex'); // On retire flex à la fermeture
+}
+</script>
+</body>
+</html>

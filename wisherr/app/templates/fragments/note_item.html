@@ -1,0 +1,26 @@
+<div id="note-{{ note.id }}" class="group bg-slate-900 border border-slate-800 p-4 rounded-xl flex justify-between items-center transition-all hover:border-slate-700">
+    <p class="text-slate-200">{{ note.content }}</p>
+    
+    <div class="flex items-center gap-2">
+        <button onclick="fillSearch('{{ note.content }}')" 
+                class="opacity-0 group-hover:opacity-100 text-slate-500 hover:text-indigo-400 transition-all">
+            <i class="fa-solid fa-magnifying-glass text-sm"></i>
+        </button>
+
+        <button hx-delete="/notes/{{ note.id }}" 
+                hx-target="#note-{{ note.id }}" 
+                hx-swap="outerHTML"
+                class="opacity-0 group-hover:opacity-100 text-slate-500 hover:text-red-500 transition-all">
+            <i class="fa-solid fa-trash-can text-sm"></i>
+        </button>
+    </div>
+</div>
+
+<script>
+function fillSearch(text) {
+    const searchInput = document.getElementById('search-input');
+    searchInput.value = text;
+    searchInput.focus();
+    // Optionnel : déclencher la recherche automatiquement ici plus tard
+}
+</script>
