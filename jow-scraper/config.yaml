@@ -1,6 +1,6 @@
 name: "Jow Scraper"
 description: "Scraper de recettes JOW"
-version: "0.0.2
+version: "0.0.2"
 slug: "jow_scraper"
 arch:
 - aarch64
