@@ -1,0 +1,22 @@
+{
+  "props": {
+    "pageProps": {}
+  },
+  "page": "/cooking/recipes-selection/[sharingId]",
+  "query": {},
+  "buildId": "5d9b0a44c79a90f",
+  "nextExport": true,
+  "autoExport": true,
+  "isFallback": false,
+  "dynamicIds": [
+    39035,
+    55431
+  ],
+  "locale": "fr",
+  "locales": [
+    "fr",
+    "en"
+  ],
+  "defaultLocale": "fr",
+  "scriptLoader": []
+}

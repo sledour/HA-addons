@@ -1,0 +1,17 @@
+name: "Jow Scraper"
+description: "Scraper de recettes JOW"
+version: "0.0.1"
+slug: "jow_scraper"
+arch:
+- aarch64
+- amd64
+- armv7
+init: false
+ports:
+  5000/tcp: 5000
+startup: services
+boot: auto
+options:
+  log_level: info
+schema:
+  log_level: list(debug|info|warning|error|fatal)?
